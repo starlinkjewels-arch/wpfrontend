@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { ArrowLeft, Ban, CheckCircle2, Clock3, Copy, MoreHorizontal, Pause, Pencil, Play, RotateCcw, Search, Trash2, XCircle, CircleSlash, Users, CalendarClock, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Clock3, Copy, MoreHorizontal, Pause, Pencil, Play, RotateCcw, Search, Trash2, XCircle, CircleSlash, Users, CalendarClock, ChevronLeft, ChevronRight, Sparkles, CheckCheck, Eye, MessageCircleReply, BellOff, Reply } from "lucide-react";
 import { api, del, post, type Campaign, type Recipient } from "../lib/api";
 import { useDebounced } from "../lib/hooks";
 import { Badge, Button, Card, Loading, Menu, MenuItem, Segmented, useConfirm, Avatar } from "../components/ui";
@@ -11,7 +11,7 @@ import { StatusBadge, WaitingLine } from "../components/CampaignBits";
 import { PhonePreview } from "../components/PhonePreview";
 import { dateTime, friendlyWhen, num, pct, phone, time } from "../lib/format";
 
-type RFilter = "all" | "sent" | "pending" | "failed" | "skipped";
+type RFilter = "all" | "sent" | "pending" | "failed" | "skipped" | "replied" | "no-reply";
 
 export function CampaignDetailPage() {
   const { id } = useParams();
@@ -37,7 +37,7 @@ export function CampaignDetailPage() {
   });
   const live = c && ["running", "queued"].includes(c.status);
   // Any change in the counts means some client's line changed too.
-  const version = c ? `${c.status}:${c.stats?.pending ?? "-"}:${c.stats?.failed ?? "-"}` : "";
+  const version = c ? `${c.status}:${c.stats?.pending ?? "-"}:${c.stats?.failed ?? "-"}:${c.stats?.delivered ?? "-"}:${c.stats?.read ?? "-"}:${c.stats?.replied ?? "-"}` : "";
   const recips = useQuery({
     queryKey: ["recipients", id, rf, dq, page, version],
     queryFn: () => api<{ items: Recipient[]; total: number; pageSize: number }>(`/campaigns/${id}/recipients?status=${rf}&q=${encodeURIComponent(dq)}&page=${page}&pageSize=50`),
@@ -51,6 +51,19 @@ export function CampaignDetailPage() {
     queryFn: () => post<{ text: string; contact: { name: string } }>("/render", { message: c!.message }),
     enabled: Boolean(c?.message),
     staleTime: Infinity,
+  });
+
+  /* A new draft to one group of this campaign's clients. Following up with
+     people who did not reply counts against WhatsApp's monthly limit on
+     unanswered messages, so the editor says so. */
+  const follow = useMutation({
+    mutationFn: (segment: "no-reply" | "read-no-reply" | "replied") => post<Campaign>(`/campaigns/${id}/follow-up`, { segment }),
+    onSuccess: (fc) => {
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+      toast.success(`Follow-up draft created for ${num(fc.audience.contactIds.length)} clients — write your message`);
+      navigate(`/campaigns/${fc.id}/edit`);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const act = useMutation({
@@ -83,6 +96,7 @@ export function CampaignDetailPage() {
   if (error || !c) return <p className="py-20 text-center text-ink-3">Campaign not found. <Link className="text-brand-text underline" to="/campaigns">Back to campaigns</Link></p>;
 
   const s = c.stats ?? { total: c.audienceCount ?? 0, pending: c.audienceCount ?? 0, sent: 0, failed: 0, skipped: 0 };
+  const noReply = Math.max(0, s.sent - (s.replied ?? 0) - (s.optedOut ?? 0));
   const done = s.sent + s.failed + s.skipped;
   const progress = pct(done, s.total);
   const canEdit = c.status === "draft" || c.status === "scheduled" || (c.status === "paused" && !c.materialized);
@@ -178,6 +192,36 @@ export function CampaignDetailPage() {
             )}
           </Card>
 
+          {/* What happened after sending */}
+          {s.sent > 0 && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-[15px] font-semibold">How clients responded</h3>
+                <span className="text-[12px] text-ink-3">Read receipts show only for clients who have them switched on.</span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Funnel label="Delivered" value={s.delivered ?? 0} of={s.sent} icon={<CheckCheck />} />
+                <Funnel label="Read" value={s.read ?? 0} of={s.sent} icon={<Eye />} accent="text-[#53bdeb]" />
+                <Funnel label="Replied" value={s.replied ?? 0} of={s.sent} icon={<MessageCircleReply />} accent="text-brand-text" />
+                <Funnel label="Opted out" value={s.optedOut ?? 0} of={s.sent} icon={<BellOff />} accent={(s.optedOut ?? 0) > 0 ? "text-warn" : undefined} />
+              </div>
+              {c.materialized && ["completed", "cancelled", "paused", "running"].includes(c.status) && (
+                <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+                  <span className="mr-1 text-[13px] font-medium text-ink-2">Follow up with:</span>
+                  <Button size="sm" icon={<Reply className="size-4" />} disabled={!noReply} loading={follow.isPending && follow.variables === "no-reply"} onClick={() => follow.mutate("no-reply")}>
+                    No reply ({num(noReply)})
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={!(s.read ?? 0)} loading={follow.isPending && follow.variables === "read-no-reply"} onClick={() => follow.mutate("read-no-reply")}>
+                    Read, no reply
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={!(s.replied ?? 0)} loading={follow.isPending && follow.variables === "replied"} onClick={() => follow.mutate("replied")}>
+                    Replied ({num(s.replied ?? 0)})
+                  </Button>
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* Recipients */}
           <Card className="overflow-hidden">
             <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
@@ -191,6 +235,7 @@ export function CampaignDetailPage() {
                     { value: "pending", label: "Waiting", count: s.pending },
                     { value: "failed", label: "Failed", count: s.failed },
                     { value: "skipped", label: "Skipped", count: s.skipped },
+                    ...(s.sent ? [{ value: "replied" as RFilter, label: "Replied", count: s.replied ?? 0 }, { value: "no-reply" as RFilter, label: "No reply", count: noReply }] : []),
                   ]}
                 />
               </div>
@@ -269,8 +314,29 @@ function Row({ icon, label, children }: { icon: React.ReactNode; label: string; 
   );
 }
 
+function Funnel({ label, value, of, icon, accent }: { label: string; value: number; of: number; icon: React.ReactNode; accent?: string }) {
+  return (
+    <div className="rounded-xl bg-surface-2 px-3.5 py-3">
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-2">
+        <span className={clsx("[&>svg]:size-3.5", accent ?? "text-ink-3")}>{icon}</span>
+        {label}
+      </div>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-xl font-semibold tracking-tight">{num(value)}</span>
+        <span className="text-[12px] text-ink-3">{pct(value, of)}%</span>
+      </div>
+    </div>
+  );
+}
+
 function RecipientBadge({ r }: { r: Recipient }) {
-  if (r.status === "sent") return <Badge tone="brand"><CheckCircle2 className="size-3" />Sent</Badge>;
+  if (r.status === "sent") {
+    if (r.optedOutAt) return <Badge tone="warn"><BellOff className="size-3" />Opted out</Badge>;
+    if (r.repliedAt) return <Badge tone="brand"><MessageCircleReply className="size-3" />Replied</Badge>;
+    if (r.readAt) return <Badge tone="info"><CheckCheck className="size-3" />Read</Badge>;
+    if (r.deliveredAt) return <Badge tone="neutral"><CheckCheck className="size-3" />Delivered</Badge>;
+    return <Badge tone="neutral"><CheckCircle2 className="size-3" />Sent</Badge>;
+  }
   if (r.status === "failed") return <Badge tone="danger"><XCircle className="size-3" />Failed</Badge>;
   if (r.status === "skipped") return <Badge tone="neutral">Skipped</Badge>;
   return <Badge tone="info"><Clock3 className="size-3" />Waiting</Badge>;

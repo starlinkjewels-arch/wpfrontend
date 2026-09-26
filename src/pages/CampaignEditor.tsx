@@ -36,7 +36,7 @@ type Form = {
 
 type AudiencePreview = {
   count: number;
-  excluded: { optedOut: number; invalid: number; excludedTag: number };
+  excluded: { optedOut: number; invalid: number; excludedTag: number; ignored?: number };
   sample: { id: string; name: string; company: string; phone: string }[];
   missing: { key: string; label: string; missing: number }[];
   estimateMs: number;
@@ -286,6 +286,15 @@ export function CampaignEditorPage() {
         className="mb-6 w-full bg-transparent font-display text-[28px] font-medium tracking-tight text-ink outline-none placeholder:text-ink-3 sm:text-[32px]"
       />
 
+      {existing.data?.followUpOf && (
+        <div className="mb-6 rounded-xl bg-info-soft px-4 py-3 text-[13px] text-info">
+          <b>Follow-up</b> to “{existing.data.followUpOf.name}”.{" "}
+          {existing.data.followUpOf.segment === "replied"
+            ? "These clients replied — thank them and move the conversation forward."
+            : "These clients have not replied. Keep it short, add something new (a photo, a price, a date), and ask one simple question. Messages that get no answer count against WhatsApp's monthly limit, so follow up once, not repeatedly."}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
         <div className="min-w-0 space-y-6">
           {/* 1. Audience */}
@@ -362,6 +371,9 @@ export function CampaignEditorPage() {
               {aud.data && aud.data.excluded.optedOut > 0 && <span className="text-ink-3">{num(aud.data.excluded.optedOut)} opted out — skipped</span>}
               {aud.data && aud.data.excluded.invalid > 0 && <span className="text-ink-3">{num(aud.data.excluded.invalid)} not on WhatsApp — skipped</span>}
               {aud.data && aud.data.excluded.excludedTag > 0 && <span className="text-ink-3">{num(aud.data.excluded.excludedTag)} left out by tag</span>}
+              {aud.data && (aud.data.excluded.ignored ?? 0) > 0 && (
+                <span className="text-ink-3" title="Settings → Sending safety → Skip clients who ignore campaigns">{num(aud.data.excluded.ignored!)} ignored recent campaigns — skipped</span>
+              )}
             </div>
           </Section>
 

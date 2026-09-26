@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { Building2, Clock, ShieldCheck, Bot, Save, Info, Database, Sparkles, KeyRound, ExternalLink, FlaskConical, Check } from "lucide-react";
+import { Building2, Clock, ShieldCheck, Bot, Save, Info, Database, Sparkles, KeyRound, ExternalLink, FlaskConical, Check, TrendingUp, Globe2, Coffee } from "lucide-react";
 import { post, put, type AiSettings, type AiTone, type Settings } from "../lib/api";
 import { useAiStatus, useSettings, useStatus } from "../lib/hooks";
 import { Badge, Button, Callout, Card, Label, Loading, PageHeader, Segmented, Switch } from "../components/ui";
@@ -96,17 +96,109 @@ export function SettingsPage() {
                 </div>
               </div>
               <Callout tone="gold" icon={<Info />}>
-                A new WhatsApp number should start around 50–100 messages a day and grow slowly over a few weeks. Established numbers that mostly message known buyers can handle a few hundred.
+                WhatsApp publishes no daily limit for a normal number — it watches behaviour. Safe guide: a new number 20–50 a day for the first week, rising over 3–4 weeks; an established number messaging known buyers 200–300. Use warm-up below for a new number.
               </Callout>
+
+              {/* Warm-up */}
               <div className="rounded-xl border border-line p-4">
-                <Switch checked={s.window.enabled} onChange={(v) => up({ window: { ...s.window, enabled: v } })} label="Only send during business hours" description="A campaign pauses outside these hours and continues the next day by itself." />
+                <Switch
+                  checked={s.warmup.enabled}
+                  onChange={(v) => up({ warmup: { ...s.warmup, enabled: v } })}
+                  label={<span className="flex items-center gap-1.5"><TrendingUp className="size-4 text-brand" /> Warm-up for a new number</span>}
+                  description="Starts low and raises the daily limit a little every day, up to your daily limit. The best protection for a number that has never sent campaigns."
+                />
+                {s.warmup.enabled && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+                      Start at
+                      <input type="number" min={5} className="field w-20" value={s.warmup.startLimit} onChange={(e) => up({ warmup: { ...s.warmup, startLimit: Number(e.target.value) } })} />
+                      a day, add
+                      <input type="number" min={1} className="field w-20" value={s.warmup.step} onChange={(e) => up({ warmup: { ...s.warmup, step: Number(e.target.value) } })} />
+                      each day
+                    </div>
+                    <WarmupLine s={s} />
+                    {s.warmup.startedAt && (
+                      <button type="button" className="text-[12px] font-medium text-ink-3 underline underline-offset-2 hover:text-ink" onClick={() => up({ warmup: { ...s.warmup, restart: true } })}>
+                        Restart warm-up from day 1
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Hours */}
+              <div className="rounded-xl border border-line p-4">
+                <Switch checked={s.window.enabled} onChange={(v) => up({ window: { ...s.window, enabled: v } })} label="Only send during business hours" description="A campaign pauses outside these hours and continues by itself." />
                 {s.window.enabled && (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+                      <Clock className="size-4 text-ink-3" /> From
+                      <input type="time" className="field w-32" value={s.window.start} onChange={(e) => up({ window: { ...s.window, start: e.target.value } })} />
+                      to
+                      <input type="time" className="field w-32" value={s.window.end} onChange={(e) => up({ window: { ...s.window, end: e.target.value } })} />
+                    </div>
+                    <Segmented
+                      value={s.window.clientLocal ? "client" : "mine"}
+                      onChange={(v) => up({ window: { ...s.window, clientLocal: v === "client" } })}
+                      options={[
+                        { value: "client", label: <><Globe2 className="size-3.5" /> Each client's local time</> },
+                        { value: "mine", label: `My time (${s.timezone.split("/").pop()?.replace("_", " ")})` },
+                      ]}
+                    />
+                    <p className="text-[12px] text-ink-3">
+                      {s.window.clientLocal
+                        ? "Recommended for clients abroad: Dubai gets it in Dubai office hours, New York in New York office hours — from each client's country."
+                        : "All clients get messages during these hours in your time zone, wherever they are."}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-4 border-t border-line pt-4">
+                  <Switch
+                    checked={s.window.skipWeekends}
+                    onChange={(v) => up({ window: { ...s.window, skipWeekends: v } })}
+                    label="Don't send on weekends"
+                    description="B2B replies drop sharply on weekends. With local time on, Gulf countries and Israel skip Friday–Saturday, everyone else Saturday–Sunday."
+                  />
+                </div>
+              </div>
+
+              {/* Breaks + typing */}
+              <div className="rounded-xl border border-line p-4">
+                <Switch
+                  checked={s.restBreak.enabled}
+                  onChange={(v) => up({ restBreak: { ...s.restBreak, enabled: v } })}
+                  label={<span className="flex items-center gap-1.5"><Coffee className="size-4 text-brand" /> Safety breaks</span>}
+                  description="Pause for a few minutes after every group of messages, like a person would. Recommended."
+                />
+                {s.restBreak.enabled && (
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-ink-2">
-                    <Clock className="size-4 text-ink-3" /> From
-                    <input type="time" className="field w-32" value={s.window.start} onChange={(e) => up({ window: { ...s.window, start: e.target.value } })} />
+                    After every
+                    <input type="number" min={5} className="field w-20" value={s.restBreak.every} onChange={(e) => up({ restBreak: { ...s.restBreak, every: Number(e.target.value) } })} />
+                    messages, rest
+                    <input type="number" min={1} className="field w-16" value={s.restBreak.minMinutes} onChange={(e) => up({ restBreak: { ...s.restBreak, minMinutes: Number(e.target.value) } })} />
                     to
-                    <input type="time" className="field w-32" value={s.window.end} onChange={(e) => up({ window: { ...s.window, end: e.target.value } })} />
-                    <span className="text-[12px] text-ink-3">({s.timezone.replace("_", " ")})</span>
+                    <input type="number" min={1} className="field w-16" value={s.restBreak.maxMinutes} onChange={(e) => up({ restBreak: { ...s.restBreak, maxMinutes: Number(e.target.value) } })} />
+                    minutes
+                  </div>
+                )}
+                <div className="mt-4 border-t border-line pt-4">
+                  <Switch checked={s.typing.enabled} onChange={(v) => up({ typing: { enabled: v } })} label="Show “typing…” before each message" description="The client sees you typing for a few seconds before the message arrives, as with a real person." />
+                </div>
+              </div>
+
+              {/* Engagement */}
+              <div className="rounded-xl border border-line p-4">
+                <Switch
+                  checked={s.engagement.skipIgnored}
+                  onChange={(v) => up({ engagement: { ...s.engagement, skipIgnored: v } })}
+                  label="Skip clients who ignore campaigns"
+                  description="WhatsApp now limits how many messages you can send each month to people who never reply. Leaving out clients who stay silent protects that limit and your reply rate."
+                />
+                {s.engagement.skipIgnored && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-ink-2">
+                    Skip after
+                    <input type="number" min={1} max={20} className="field w-20" value={s.engagement.ignoredAfter} onChange={(e) => up({ engagement: { ...s.engagement, ignoredAfter: Number(e.target.value) } })} />
+                    campaigns in a row without a reply
                   </div>
                 )}
               </div>
@@ -176,6 +268,22 @@ export function SettingsPage() {
           <Button variant="primary" size="sm" icon={<Save className="size-4" />} loading={save.isPending} onClick={() => save.mutate()}>Save</Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** "Day 3 of warm-up · 70 today · full 300 a day from day 15" — from the saved settings. */
+function WarmupLine({ s }: { s: Settings }) {
+  const w = s.warmup;
+  const fullOn = Math.max(1, Math.ceil((s.dailyLimit - w.startLimit) / Math.max(1, w.step)) + 1);
+  if (!w.startedAt) {
+    return <p className="text-[12px] text-ink-3">Starts when you save: {w.startLimit} on day 1, full {s.dailyLimit} a day from day {fullOn}.</p>;
+  }
+  const day = Math.max(1, Math.floor((Date.now() - w.startedAt) / 86400000) + 1);
+  const today = Math.min(s.dailyLimit, w.startLimit + (day - 1) * w.step);
+  return (
+    <div className="rounded-lg bg-brand-soft px-3 py-2 text-[13px] text-brand-text">
+      <b>Day {day}</b> of warm-up · up to <b>{today}</b> messages today · full {s.dailyLimit} a day from day {fullOn}
     </div>
   );
 }

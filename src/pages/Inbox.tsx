@@ -245,7 +245,13 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
                   {m.text && <span className="whitespace-pre-wrap break-words"><WaText text={m.text} /></span>}
                   <span className="float-right ml-3 mt-1.5 flex translate-y-0.5 items-center gap-0.5 text-[10.5px] opacity-55">
                     {time(m.at).toLowerCase()}
-                    {out && <Check className="size-3" />}
+                    {out && (m.status === "read" ? (
+                      <CheckCheck className="size-3.5 text-[#53bdeb] opacity-100" aria-label="Read" />
+                    ) : m.status === "delivered" ? (
+                      <CheckCheck className="size-3.5" aria-label="Delivered" />
+                    ) : (
+                      <Check className="size-3" aria-label="Sent" />
+                    ))}
                   </span>
                 </div>
               </div>

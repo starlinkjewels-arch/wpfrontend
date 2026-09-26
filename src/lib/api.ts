@@ -98,7 +98,7 @@ export type WaState = {
   error: string | null;
 };
 
-export type Waiting = { campaignId: string; code: "disconnected" | "window" | "limit" | "gap" | "error"; reason: string; until?: number };
+export type Waiting = { campaignId: string; code: "disconnected" | "window" | "limit" | "gap" | "break" | "local" | "error"; reason: string; until?: number };
 
 export type Status = {
   demo: boolean;
@@ -110,6 +110,7 @@ export type Status = {
   runner: { activeId: string | null; waiting: Waiting | null };
   sentToday: number;
   dailyLimit: number | null;
+  warmupDay: number | null;
   businessName: string;
 };
 
@@ -126,6 +127,8 @@ export type Contact = {
   fields: Record<string, string>;
   optedOut: boolean;
   waStatus: "unknown" | "valid" | "invalid";
+  verifiedAt?: number;
+  campaignsSinceReply?: number;
   source: "import" | "manual" | "inbound";
   createdAt: number;
   updatedAt: number;
@@ -147,7 +150,17 @@ export type Audience = {
 
 export type CampaignStatus = "draft" | "scheduled" | "queued" | "running" | "paused" | "completed" | "cancelled";
 
-export type Stats = { total: number; pending: number; sent: number; failed: number; skipped: number };
+export type Stats = {
+  total: number;
+  pending: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  delivered?: number;
+  read?: number;
+  replied?: number;
+  optedOut?: number;
+};
 
 export type Campaign = {
   id: string;
@@ -169,12 +182,24 @@ export type Campaign = {
   finishedAt?: number;
   pausedReason?: string | null;
   ai?: { personalize: boolean };
+  followUpOf?: { id: string; name: string; segment: string };
   note?: string;
   waiting: Waiting | null;
   eta: number | null;
 };
 
-export type Recipient = { phone: string; name: string; company: string; status: "pending" | "sent" | "failed" | "skipped"; error: string | null; at: number | null };
+export type Recipient = {
+  phone: string;
+  name: string;
+  company: string;
+  status: "pending" | "sent" | "failed" | "skipped";
+  error: string | null;
+  at: number | null;
+  deliveredAt: number | null;
+  readAt: number | null;
+  repliedAt: number | null;
+  optedOutAt: number | null;
+};
 
 export type Template = { id: string; name: string; message: string; mediaId: string | null; media: Media | null; createdAt: number; updatedAt: number };
 
@@ -193,7 +218,7 @@ export type Conversation = {
   optedOut: boolean;
 };
 
-export type ChatMessage = { id: string; dir: "in" | "out"; text: string; at: number; campaignId?: string; mediaType?: string };
+export type ChatMessage = { id: string; dir: "in" | "out"; text: string; at: number; campaignId?: string; mediaType?: string; status?: "delivered" | "read" };
 
 export type Settings = {
   businessName: string;
@@ -202,7 +227,11 @@ export type Settings = {
   minDelay: number;
   maxDelay: number;
   dailyLimit: number;
-  window: { enabled: boolean; start: string; end: string };
+  window: { enabled: boolean; start: string; end: string; clientLocal: boolean; skipWeekends: boolean };
+  warmup: { enabled: boolean; startLimit: number; step: number; startedAt: number | null; restart?: boolean };
+  restBreak: { enabled: boolean; every: number; minMinutes: number; maxMinutes: number };
+  typing: { enabled: boolean };
+  engagement: { skipIgnored: boolean; ignoredAfter: number };
   autoAddInbound: boolean;
   inboundTag: string;
   optOut: { enabled: boolean; keywords: string[]; reply: string };
@@ -268,3 +297,19 @@ export type ContactsMeta = {
   builtIn: { key: string; label: string }[];
   counts: Counts;
 };
+
+/* ── Account health ─────────────────────────────────────────────────── */
+
+export type HealthCheck = { level: "warn" | "bad"; title: string; tip: string };
+
+export type Health = {
+  verdict: "good" | "watch" | "risk";
+  totals: { sent: number; delivered: number; read: number; replied: number; optedOut: number; failed: number };
+  rates: { reply: number | null; optOut: number | null; fail: number | null; read: number | null };
+  unanswered: number;
+  ignoring: number;
+  cap: { limit: number; day: number | null; fullOnDay: number | null };
+  checks: HealthCheck[];
+};
+
+export type VerifyJob = { total: number; done: number; valid: number; invalid: number; skipped: number; running: boolean; startedAt: number; finishedAt: number | null; lastError: string | null };

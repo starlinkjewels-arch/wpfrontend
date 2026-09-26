@@ -2,7 +2,8 @@ import { Link, useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ArrowRight, Check, FileSpreadsheet, Megaphone, MessageCircle, Plus, QrCode, Sparkles, Users, X, CalendarClock, Send } from "lucide-react";
-import { api, put, type Campaign, type Contact, type Counts, type Day } from "../lib/api";
+import { api, put, type Campaign, type Contact, type Counts, type Day, type Health } from "../lib/api";
+import { ShieldCheck, ShieldAlert, AlertTriangle, TrendingUp } from "lucide-react";
 import { useStatus } from "../lib/hooks";
 import { Avatar, Button, Card, CardHeader, Loading, Progress, Badge } from "../components/ui";
 import { SentChart } from "../components/SentChart";
@@ -20,6 +21,7 @@ type Dashboard = {
   recentInquiries: Contact[];
   unread: number;
   onboarding: { connected: boolean; hasContacts: boolean; hasCampaign: boolean; dismissed: boolean };
+  health: Health;
 };
 
 function greeting() {
@@ -134,6 +136,8 @@ export function HomePage() {
         </div>
 
         <div className="min-w-0 space-y-6">
+          <HealthCard health={data.health} />
+
           <Card>
             <CardHeader
               title="New enquiries"
@@ -174,6 +178,85 @@ export function HomePage() {
         </div>
       </div>
     </>
+  );
+}
+
+const VERDICT = {
+  good: { label: "Healthy", tone: "brand" as const, icon: ShieldCheck, line: "Your number is sending safely." },
+  watch: { label: "Keep an eye on it", tone: "warn" as const, icon: AlertTriangle, line: "A few things could put your number at risk." },
+  risk: { label: "At risk", tone: "danger" as const, icon: ShieldAlert, line: "WhatsApp may restrict this number if this continues." },
+};
+
+/**
+ * The signals WhatsApp watches — replies, opt-outs, dead numbers, unanswered
+ * messages — for the last 30 days, with what to do about each.
+ */
+function HealthCard({ health }: { health: Health }) {
+  const v = VERDICT[health.verdict];
+  const Icon = v.icon;
+  const p = (x: number | null) => (x == null ? "—" : `${Math.round(x * 100)}%`);
+  const t = health.totals;
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[15px] font-semibold">Account health</h3>
+          <p className="mt-0.5 text-[13px] text-ink-3">{v.line}</p>
+        </div>
+        <Badge tone={v.tone}><Icon className="size-3.5" />{v.label}</Badge>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Metric label="Reply rate" value={p(health.rates.reply)} good={(health.rates.reply ?? 1) >= 0.1} hint={`${num(t.replied)} of ${num(t.sent)}`} />
+        <Metric label="Read rate" value={p(health.rates.read)} good={(health.rates.read ?? 1) >= 0.5} hint={`${num(t.read)} read`} />
+        <Metric label="Opted out" value={p(health.rates.optOut)} good={(health.rates.optOut ?? 0) <= 0.01} hint={`${num(t.optedOut)} client${t.optedOut === 1 ? "" : "s"}`} />
+        <Metric label="Not on WhatsApp" value={p(health.rates.fail)} good={(health.rates.fail ?? 0) <= 0.05} hint={`${num(t.failed)} number${t.failed === 1 ? "" : "s"}`} />
+      </div>
+      <p className="mt-2 text-[11px] text-ink-3">Campaigns started in the last 30 days.</p>
+
+      <div className="mt-4 space-y-2 border-t border-line pt-4 text-[13px]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-ink-2">Unanswered this month</span>
+          <b className={health.unanswered >= 500 ? "text-warn" : "text-ink"}>{num(health.unanswered)}</b>
+        </div>
+        {health.cap.day && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-ink-2"><TrendingUp className="size-3.5 text-brand" /> Warm-up</span>
+            <b className="text-ink">Day {health.cap.day} · {num(health.cap.limit)} today</b>
+          </div>
+        )}
+        {health.ignoring > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-ink-2">Clients ignoring campaigns</span>
+            <b className="text-ink">{num(health.ignoring)}</b>
+          </div>
+        )}
+      </div>
+
+      {health.checks.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {health.checks.slice(0, 3).map((c) => (
+            <li key={c.title} className={clsx("rounded-lg px-3 py-2 text-[12px]", c.level === "bad" ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn")}>
+              <b className="block text-[13px]">{c.title}</b>
+              {c.tip}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link to="/settings#safety" className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-brand-text hover:underline">
+        Sending safety settings <ArrowRight className="size-3.5" />
+      </Link>
+    </Card>
+  );
+}
+
+function Metric({ label, value, good, hint }: { label: string; value: string; good: boolean; hint: string }) {
+  return (
+    <div className="rounded-xl bg-surface-2 px-3 py-2.5">
+      <div className="text-[12px] text-ink-3">{label}</div>
+      <div className={clsx("mt-0.5 text-lg font-semibold tracking-tight", value !== "—" && !good && "text-warn")}>{value}</div>
+      <div className="text-[11px] text-ink-3">{hint}</div>
+    </div>
   );
 }
 

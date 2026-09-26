@@ -33,6 +33,13 @@ export function WaitingLine({ c }: { c: Campaign }) {
   if (c.status === "running" && c.waiting) {
     const secs = c.waiting.until ? Math.max(0, Math.round((c.waiting.until - now) / 1000)) : null;
     if (c.waiting.code === "gap") return <span className="text-ink-3">Next message in {secs ?? "a few"}s</span>;
+    if (c.waiting.code === "break") {
+      const m = secs != null ? Math.floor(secs / 60) : null;
+      return <span className="text-ink-3">☕ Safety break — continues in {m != null ? `${m}:${String(secs! % 60).padStart(2, "0")}` : "a few minutes"}</span>;
+    }
+    if (c.waiting.code === "local") {
+      return <span className="text-info">🌍 Waiting for clients' office hours · next {c.waiting.until ? friendlyWhen(c.waiting.until) : "soon"} (your time)</span>;
+    }
     if (c.waiting.code === "window" || c.waiting.code === "limit") {
       return <span className="text-warn">{c.waiting.reason} · resumes {c.waiting.until ? friendlyWhen(c.waiting.until) : "later"}</span>;
     }

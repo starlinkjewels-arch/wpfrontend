@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, Megaphone, MoreHorizontal, Plus, Search, Tag as TagIcon, Trash2, UserPlus, Users, X, BellOff, Bell, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
-import { api, post, type Contact, type Counts } from "../lib/api";
+import { Download, FileSpreadsheet, Megaphone, MoreHorizontal, Plus, Search, Tag as TagIcon, Trash2, UserPlus, Users, X, BellOff, Bell, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, CheckCheck, Loader2 } from "lucide-react";
+import { api, post, type Contact, type Counts, type VerifyJob } from "../lib/api";
 import { useDebounced, useMeta } from "../lib/hooks";
-import { Avatar, Badge, Button, Card, Checkbox, Empty, Loading, Menu, MenuItem, Modal, PageHeader, Segmented, Tag, useConfirm, Label } from "../components/ui";
+import { Avatar, Badge, Button, Card, Checkbox, Empty, Loading, Menu, MenuItem, Modal, PageHeader, Progress, Segmented, Tag, useConfirm, Label } from "../components/ui";
 import { ClientDrawer } from "../components/ClientDrawer";
 import { TagInput } from "../components/TagInput";
-import { ago, countryName, flag, num, phone } from "../lib/format";
+import { ago, countryName, flag, num, pct, phone } from "../lib/format";
 import { exportContacts } from "../lib/excel";
 import { local } from "../lib/storage";
 
@@ -83,6 +83,19 @@ export function ClientsPage() {
   };
 
   const selectionBody = () => (allMatching ? { filter: Object.fromEntries(new URLSearchParams(filterQs)) } : { ids: [...selected] });
+
+  const verify = useMutation({
+    mutationFn: () => post<{ job: VerifyJob }>("/contacts/verify", selectionBody()),
+    onSuccess: (r) => {
+      setSelected(new Set());
+      setAllMatching(false);
+      qc.setQueryData(["verify"], r);
+      qc.invalidateQueries({ queryKey: ["verify"] });
+      if (!r.job.total) toast.info("All of these were checked in the last 30 days");
+      else toast.success(`Checking ${num(r.job.total)} numbers — about ${Math.max(1, Math.round((r.job.total * 2.5) / 60))} min`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const bulk = useMutation({
     mutationFn: (body: Record<string, unknown>) => post<{ count: number }>("/contacts/bulk", { ...selectionBody(), ...body }),
@@ -189,6 +202,8 @@ export function ClientsPage() {
               />
             </div>
           </div>
+
+          <VerifyBanner />
 
           {(meta?.tags.length ?? 0) > 0 && (
             <div className="scroll-thin -mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
@@ -352,6 +367,7 @@ export function ClientsPage() {
               <>
                 <MenuItem icon={<TagIcon />} onClick={() => { close(); setTagModal("addTags"); }}>Add tag</MenuItem>
                 <MenuItem icon={<X />} onClick={() => { close(); setTagModal("removeTags"); }}>Remove tag</MenuItem>
+                <MenuItem icon={<ShieldCheck />} onClick={() => { close(); verify.mutate(); }}>Check on WhatsApp</MenuItem>
                 <MenuItem icon={<BellOff />} onClick={() => { close(); bulk.mutate({ action: "optOut" }); }}>Mark as opted out</MenuItem>
                 <MenuItem icon={<Bell />} onClick={() => { close(); bulk.mutate({ action: "optIn" }); }}>Mark as opted in</MenuItem>
                 <MenuItem icon={<Trash2 />} danger onClick={() => { close(); deleteSelected(); }}>Delete {num(selCount)} clients</MenuItem>
@@ -379,11 +395,59 @@ export function ClientsPage() {
   );
 }
 
+/**
+ * Progress of "Check on WhatsApp": one number every couple of seconds, so a
+ * few hundred take a few minutes. Shown until dismissed after it finishes.
+ */
+function VerifyBanner() {
+  const qc = useQueryClient();
+  const [hidden, setHidden] = useState<number | null>(null);
+  const { data } = useQuery({
+    queryKey: ["verify"],
+    queryFn: () => api<{ job: VerifyJob | null }>("/contacts/verify"),
+    refetchInterval: (q) => (q.state.data?.job?.running ? 2000 : false),
+  });
+  const job = data?.job;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && job && !job.running) {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["contacts-meta"] });
+    }
+    wasRunning.current = Boolean(job?.running);
+  }, [job?.running, job, qc]);
+  const cancel = useMutation({ mutationFn: () => post("/contacts/verify/cancel"), onSuccess: () => qc.invalidateQueries({ queryKey: ["verify"] }) });
+  if (!job || (!job.running && hidden === job.startedAt) || (!job.running && Date.now() - (job.finishedAt ?? 0) > 10 * 60000)) return null;
+  return (
+    <Card className="mb-4 p-4">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {job.running ? <Loader2 className="size-4 animate-spin text-brand" /> : <ShieldCheck className="size-4 text-brand" />}
+        <span className="font-medium">
+          {job.running ? `Checking numbers on WhatsApp… ${num(job.done)} of ${num(job.total)}` : `Checked ${num(job.done)} numbers`}
+        </span>
+        <span className="text-ink-3">
+          {num(job.valid)} on WhatsApp · <span className={job.invalid ? "text-danger" : ""}>{num(job.invalid)} not on WhatsApp</span>
+          {job.skipped > 0 && ` · ${num(job.skipped)} checked recently, skipped`}
+        </span>
+        <span className="ml-auto">
+          {job.running ? (
+            <Button size="sm" variant="ghost" onClick={() => cancel.mutate()}>Stop</Button>
+          ) : (
+            <button className="rounded-lg p-1 text-ink-3 hover:bg-surface-2 hover:text-ink" onClick={() => setHidden(job.startedAt)} aria-label="Hide"><X className="size-4" /></button>
+          )}
+        </span>
+      </div>
+      {job.running && <Progress value={pct(job.done, job.total)} className="mt-3" />}
+      {job.lastError && <p className="mt-2 text-[12px] text-danger">{job.lastError}</p>}
+    </Card>
+  );
+}
+
 function ContactStatus({ c, compact }: { c: Contact; compact?: boolean }) {
   if (c.optedOut) return <Badge tone="warn">{compact ? "Opted out" : "Opted out"}</Badge>;
   if (c.waStatus === "invalid") return <Badge tone="danger">{compact ? "No WA" : "Not on WhatsApp"}</Badge>;
   if (compact) return null;
-  return <Badge tone="brand" dot>Active</Badge>;
+  return c.waStatus === "valid" ? <Badge tone="brand"><CheckCheck className="size-3" />On WhatsApp</Badge> : <Badge tone="brand" dot>Active</Badge>;
 }
 
 function TagModal({ mode, count, suggestions, onClose, onApply }: { mode: null | "addTags" | "removeTags"; count: number; suggestions: string[]; onClose: () => void; onApply: (t: string[]) => void }) {
