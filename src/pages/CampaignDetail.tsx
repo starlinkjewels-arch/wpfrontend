@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { ArrowLeft, Ban, CheckCircle2, Clock3, Copy, MoreHorizontal, Pause, Pencil, Play, RotateCcw, Search, Trash2, XCircle, CircleSlash, Users, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Clock3, Copy, MoreHorizontal, Pause, Pencil, Play, RotateCcw, Search, Trash2, XCircle, CircleSlash, Users, CalendarClock, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { api, del, post, type Campaign, type Recipient } from "../lib/api";
 import { useDebounced } from "../lib/hooks";
 import { Badge, Button, Card, Loading, Menu, MenuItem, Segmented, useConfirm, Avatar } from "../components/ui";
@@ -106,6 +106,11 @@ export function CampaignDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {c.ai?.personalize && (
+            <Button variant="soft" icon={<Sparkles className="size-4" />} onClick={() => navigate(`/campaigns/${c.id}/review`)}>
+              Each client's message
+            </Button>
+          )}
           {canEdit && <Button icon={<Pencil className="size-4" />} onClick={() => navigate(`/campaigns/${c.id}/edit`)}>Edit</Button>}
           {(c.status === "running" || c.status === "queued" || c.status === "scheduled") && (
             <Button icon={<Pause className="size-4" />} loading={act.isPending && act.variables === "pause"} onClick={() => act.mutate("pause")}>Pause</Button>
@@ -231,6 +236,7 @@ export function CampaignDetailPage() {
             </Row>
             {c.audience.excludeTags.length > 0 && <Row icon={<Ban />} label="Left out">{c.audience.excludeTags.join(", ")}</Row>}
             <Row icon={<Clock3 />} label="Gap">{c.minDelay}–{c.maxDelay} seconds</Row>
+            {c.ai?.personalize && <Row icon={<Sparkles />} label="Writing">AI writes each client their own message</Row>}
             {c.scheduledAt && <Row icon={<CalendarClock />} label="Scheduled">{dateTime(c.scheduledAt)}</Row>}
           </Card>
           <p className="px-1 text-[12px] leading-relaxed text-ink-3">Each client sees their own name and details.</p>

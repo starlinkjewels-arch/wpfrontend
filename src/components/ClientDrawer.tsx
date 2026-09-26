@@ -58,14 +58,29 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
     qc.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
+  /* "Save & add another" keeps the drawer open for typing in clients one after
+     another — say, business cards from a trade show. Country and tags stay,
+     since a batch usually shares them; everything else clears. */
+  const [added, setAdded] = useState(0);
+  useEffect(() => {
+    if (open) setAdded(0);
+  }, [open]);
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: (_another: boolean) => {
       const body = { ...f, fields: Object.fromEntries(f.fields.filter(([k, v]) => k.trim() && v.trim())) };
       return contact ? put<Contact>(`/contacts/${contact.id}`, body) : post<Contact>("/contacts", body);
     },
-    onSuccess: () => {
-      toast.success(contact ? "Client updated" : "Client added");
+    onSuccess: (saved, another) => {
       refresh();
+      if (another) {
+        toast.success(`Added ${saved.name || "client"} — ready for the next one`);
+        setAdded((n) => n + 1);
+        setF({ ...empty, country: f.country, tags: f.tags });
+        requestAnimationFrame(() => document.getElementById("c-phone")?.focus());
+        return;
+      }
+      toast.success(contact ? "Client updated" : "Client added");
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -102,8 +117,14 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
               Delete
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" loading={save.isPending} onClick={() => save.mutate()} disabled={!f.phone.trim()}>
+          {!contact && added > 0 && <span className="mr-auto self-center text-[13px] text-brand-text">{added} added</span>}
+          <Button variant="ghost" onClick={onClose}>{added ? "Done" : "Cancel"}</Button>
+          {!contact && (
+            <Button loading={save.isPending && save.variables === true} onClick={() => save.mutate(true)} disabled={!f.phone.trim()}>
+              Save &amp; add another
+            </Button>
+          )}
+          <Button variant="primary" loading={save.isPending && save.variables === false} onClick={() => save.mutate(false)} disabled={!f.phone.trim()}>
             {contact ? "Save changes" : "Add client"}
           </Button>
         </>

@@ -2,12 +2,13 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { Bold, Italic, Strikethrough, Paperclip, Shuffle, Smile, X, FileText, BookmarkPlus, Library, Loader2, Braces, ImageIcon } from "lucide-react";
+import { Bold, Italic, Strikethrough, Paperclip, Shuffle, Smile, X, FileText, BookmarkPlus, Library, Loader2, Braces, ImageIcon, Sparkles } from "lucide-react";
 import { api, post, uploadMedia, type Media, type Template } from "../lib/api";
 import { useMeta } from "../lib/hooks";
 import { fileSize } from "../lib/format";
 import { Button, Modal, Empty, Label } from "./ui";
 import { MediaBlock } from "./PhonePreview";
+import { AiMenu, AiWriterModal } from "./AiTools";
 
 const EMOJI = ["💎", "✨", "💍", "👑", "🌟", "🎉", "🙏", "📦", "📞", "👇", "✅", "🔥", "🪔", "🎁", "📍", "🤝"];
 
@@ -37,6 +38,7 @@ export function MessageComposer({
   const [spinHelp, setSpinHelp] = useState(false);
   const [templates, setTemplates] = useState(false);
   const [saveTpl, setSaveTpl] = useState(false);
+  const [writer, setWriter] = useState(false);
 
   const upload = useMutation({
     mutationFn: uploadMedia,
@@ -95,6 +97,8 @@ export function MessageComposer({
           </div>
           <ToolBtn label="Random words" onClick={() => setSpinHelp(true)}><Shuffle /></ToolBtn>
           <ToolBtn label="Attach photo, video or PDF" onClick={() => file.current?.click()}><Paperclip /></ToolBtn>
+          <span className="mx-1 h-5 w-px bg-line" />
+          <AiMenu text={message} onChange={onMessage} onWrite={() => setWriter(true)} />
           <div className="ml-auto flex items-center gap-1">
             <Button size="sm" variant="ghost" icon={<Library className="size-4" />} onClick={() => setTemplates(true)}>Templates</Button>
             <Button size="sm" variant="ghost" icon={<BookmarkPlus className="size-4" />} onClick={() => setSaveTpl(true)} disabled={!message.trim() && !media} className="hidden sm:inline-flex">Save</Button>
@@ -110,6 +114,18 @@ export function MessageComposer({
           placeholder={"Hello {{first_name|Sir/Madam}},\n\nOur new collection of certified diamond jewellery is ready…"}
           className="block w-full resize-y bg-transparent px-4 py-3 text-[14px] leading-relaxed text-ink outline-none placeholder:text-ink-3"
         />
+
+        {!message.trim() && (
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={() => setWriter(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-gold/30 bg-gold-soft px-3.5 py-2 text-[13px] font-semibold text-gold transition hover:brightness-95 dark:hover:brightness-125"
+            >
+              <Sparkles className="size-4" /> Not sure what to write? Let AI write it
+            </button>
+          </div>
+        )}
 
         {/* Variables */}
         <div className="border-t border-line px-3 py-2.5">
@@ -189,6 +205,15 @@ export function MessageComposer({
           Messages that are not all identical look more natural to WhatsApp and lower the risk of your number being flagged.
         </p>
       </Modal>
+      <AiWriterModal
+        open={writer}
+        onClose={() => setWriter(false)}
+        onUse={(t) => {
+          const before = message;
+          onMessage(t);
+          if (before.trim()) toast.success("AI message added", { action: { label: "Undo", onClick: () => onMessage(before) } });
+        }}
+      />
       <TemplatePicker open={templates} onClose={() => setTemplates(false)} onPick={(t) => { onMessage(t.message); onMedia(t.media); setTemplates(false); toast.success(`Loaded "${t.name}"`); }} />
       <SaveTemplate open={saveTpl} onClose={() => setSaveTpl(false)} message={message} mediaId={media?.id ?? null} />
     </div>

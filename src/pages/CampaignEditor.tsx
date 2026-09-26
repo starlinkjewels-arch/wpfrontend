@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical } from "lucide-react";
+import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical, Sparkles, ListChecks } from "lucide-react";
 import { api, post, put, type Audience, type Campaign, type Contact, type Media } from "../lib/api";
 import { useDebounced, useMeta, useSettings, useStatus } from "../lib/hooks";
-import { Button, Card, Checkbox, Label, Loading, Modal, Segmented, Avatar, useConfirm } from "../components/ui";
+import { Button, Card, Checkbox, Label, Loading, Modal, Segmented, Avatar, Switch, useConfirm } from "../components/ui";
+import { AiSetupHint } from "../components/AiTools";
 import { MessageComposer } from "../components/MessageComposer";
 import { PhonePreview } from "../components/PhonePreview";
 import { duration, friendlyWhen, num, phone } from "../lib/format";
@@ -29,6 +30,8 @@ type Form = {
   speed: Speed;
   minDelay: number;
   maxDelay: number;
+  /** AI writes each client their own version of the message. */
+  aiPersonalize: boolean;
 };
 
 type AudiencePreview = {
@@ -117,6 +120,7 @@ export function CampaignEditorPage() {
         speed: speedOf(c.minDelay, c.maxDelay),
         minDelay: c.minDelay,
         maxDelay: c.maxDelay,
+        aiPersonalize: Boolean(c.ai?.personalize),
       });
       return;
     }
@@ -132,6 +136,7 @@ export function CampaignEditorPage() {
       speed: speedOf(settings.minDelay, settings.maxDelay),
       minDelay: settings.minDelay,
       maxDelay: settings.maxDelay,
+      aiPersonalize: false,
     };
     if (handed?.contactIds?.length) setF({ ...base, audience: { ...emptyAudience, mode: "contacts", contactIds: handed.contactIds } });
     else if (handed?.tags?.length) setF({ ...base, audience: { ...emptyAudience, mode: "tags", tags: handed.tags } });
@@ -169,6 +174,17 @@ export function CampaignEditorPage() {
     placeholderData: (p) => p,
   });
 
+  /* The AI version of the message for the client shown in the preview. Asked
+     for on a button press — not on every keystroke, each one is a paid call —
+     and forgotten as soon as the message or the client changes. */
+  const [aiPreview, setAiPreview] = useState<{ contactId: string | null; message: string; text: string; name: string } | null>(null);
+  const aiShown = f?.aiPersonalize && aiPreview && aiPreview.message === f.message && aiPreview.contactId === (previewContact?.id ?? null) ? aiPreview : null;
+  const aiPrev = useMutation({
+    mutationFn: () => post<{ text: string; contact: { id: string; name: string } }>("/ai/personalize-preview", { message: f!.message, contactId: previewContact?.id }),
+    onSuccess: (r) => setAiPreview({ contactId: previewContact?.id ?? null, message: f!.message, text: r.text, name: r.contact.name }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const sendAtMs = f ? new Date(f.sendAt).getTime() : 0;
   const count = aud.data?.count ?? 0;
   const estimate = count * (((f?.minDelay ?? 10) + (f?.maxDelay ?? 25)) / 2 + 3) * 1000;
@@ -180,17 +196,24 @@ export function CampaignEditorPage() {
     audience: f!.audience,
     minDelay: f!.minDelay,
     maxDelay: f!.maxDelay,
+    ai: { personalize: f!.aiPersonalize },
     action,
     sendAt: f!.when === "later" ? sendAtMs : undefined,
   });
 
+  // "review" saves as a draft and opens the page listing every client's AI message.
   const save = useMutation({
-    mutationFn: (action: "draft" | "schedule") => (editing ? put<Campaign>(`/campaigns/${id}`, body(action)) : post<Campaign>("/campaigns", body(action))),
+    mutationFn: (action: "draft" | "schedule" | "review") => {
+      const b = body(action === "review" ? "draft" : action);
+      return editing ? put<Campaign>(`/campaigns/${id}`, b) : post<Campaign>("/campaigns", b);
+    },
     onSuccess: (c, action) => {
       if (!editing) local.remove(DRAFT_KEY);
       qc.invalidateQueries({ queryKey: ["campaigns"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      if (action === "draft") {
+      if (action === "review") {
+        navigate(`/campaigns/${c.id}/review`);
+      } else if (action === "draft") {
         toast.success("Draft saved");
         navigate("/campaigns");
       } else {
@@ -202,7 +225,15 @@ export function CampaignEditorPage() {
   });
 
   const test = useMutation({
-    mutationFn: () => post<{ to: string }>("/test-message", { message: f!.message, mediaId: f!.media?.id, contactId: previewContact?.id }),
+    // With AI on, the test is the AI version on screen — or a fresh one if none is shown.
+    mutationFn: () =>
+      post<{ to: string }>("/test-message", {
+        message: f!.message,
+        mediaId: f!.media?.id,
+        contactId: previewContact?.id,
+        personalizeAi: f!.aiPersonalize,
+        text: aiShown?.text,
+      }),
     onSuccess: (r) => toast.success(`Test sent to your WhatsApp ${phone(r.to)}`),
     onError: (e: Error) => toast.error(e.message),
   });
@@ -227,6 +258,9 @@ export function CampaignEditorPage() {
           <p>Messages go out one by one, {f!.minDelay}–{f!.maxDelay} seconds apart — {duration(estimate)} in total.</p>
           {settings?.window.enabled && <p>Only between {settings.window.start} and {settings.window.end}; it continues the next day if needed.</p>}
           {status?.wa.status !== "connected" && <p className="font-medium text-warn">WhatsApp is not connected — it will start as soon as you connect.</p>}
+          {f!.aiPersonalize && (
+            <p className="font-medium text-gold">✨ AI writes each client their own message. Messages you reviewed are sent exactly as they are; the rest are written just before sending.</p>
+          )}
           <p>You can pause or cancel at any time.</p>
         </div>
       ),
@@ -334,6 +368,26 @@ export function CampaignEditorPage() {
           {/* 2. Message */}
           <Section n={2} title="Write your message">
             <MessageComposer message={f.message} onMessage={(m) => set("message", m)} media={f.media} onMedia={(m) => set("media", m)} missing={aud.data?.missing} />
+
+            <div className={clsx("mt-5 rounded-xl border p-4 transition-colors", f.aiPersonalize ? "border-gold/40 bg-gold-soft/50" : "border-line")}>
+              <Switch
+                checked={f.aiPersonalize}
+                onChange={(v) => set("aiPersonalize", v)}
+                label={<span className="flex items-center gap-1.5"><Sparkles className="size-4 text-gold" /> AI writes each client their own message</span>}
+                description="Your message above is the guide. The AI keeps every fact and offer, and makes it personal to each client — their name, company, city and preferences. No two clients get the same text."
+              />
+              {f.aiPersonalize && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button size="sm" icon={<Sparkles className="size-4" />} loading={aiPrev.isPending} disabled={!f.message.trim() || !previewContact} onClick={() => aiPrev.mutate()}>
+                    {previewContact ? `Show AI version for ${previewContact.name?.split(" ")[0] || "this client"}` : "Show AI version"}
+                  </Button>
+                  <Button size="sm" variant="soft" icon={<ListChecks className="size-4" />} loading={save.isPending && save.variables === "review"} disabled={!f.message.trim() || !count} onClick={() => save.mutate("review")}>
+                    Review each client's message
+                  </Button>
+                  <AiSetupHint className="w-full" />
+                </div>
+              )}
+            </div>
           </Section>
 
           {/* 3. When */}
@@ -411,7 +465,18 @@ export function CampaignEditorPage() {
               )}
             </div>
           </div>
-          <PhonePreview text={f.message.trim() ? render.data?.text ?? "" : ""} media={f.media} contactName={render.data?.contact.name} business={status?.businessName} />
+          {f.aiPersonalize && f.message.trim() && (
+            <div className={clsx("mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium", aiShown ? "bg-gold-soft text-gold" : "bg-surface-2 text-ink-3")}>
+              <Sparkles className="size-3.5 shrink-0" />
+              {aiShown ? `AI version for ${aiShown.name || "this client"}` : "Showing your guide message — press “Show AI version” to see what the AI writes"}
+            </div>
+          )}
+          <PhonePreview
+            text={f.message.trim() ? aiShown?.text ?? render.data?.text ?? "" : ""}
+            media={f.media}
+            contactName={aiShown?.name ?? render.data?.contact.name}
+            business={status?.businessName}
+          />
           <Button className="mt-4 w-full" icon={<FlaskConical className="size-4" />} loading={test.isPending} disabled={(!f.message.trim() && !f.media) || status?.wa.status !== "connected"} onClick={() => test.mutate()}>
             Send a test to my WhatsApp
           </Button>

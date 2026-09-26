@@ -15,6 +15,7 @@ import { ImportPage } from "./pages/Import";
 import { CampaignsPage } from "./pages/Campaigns";
 import { CampaignEditorPage } from "./pages/CampaignEditor";
 import { CampaignDetailPage } from "./pages/CampaignDetail";
+import { CampaignReviewPage } from "./pages/CampaignReview";
 import { InboxPage } from "./pages/Inbox";
 import { TemplatesPage } from "./pages/Templates";
 import { SettingsPage } from "./pages/Settings";
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
       { path: "/campaigns/new", element: <CampaignEditorPage /> },
       { path: "/campaigns/:id/edit", element: <CampaignEditorPage /> },
       { path: "/campaigns/:id", element: <CampaignDetailPage /> },
+      { path: "/campaigns/:id/review", element: <CampaignReviewPage /> },
       { path: "/inbox", element: <InboxPage /> },
       { path: "/inbox/:key", element: <InboxPage /> },
       { path: "/templates", element: <TemplatesPage /> },

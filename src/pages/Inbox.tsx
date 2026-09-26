@@ -138,6 +138,14 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
   const [drawer, setDrawer] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The reply box grows with what is in it — a suggested reply is several lines.
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = replyRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight + 2, 200)}px`;
+  }, [text]);
   const lastCount = useRef(0);
 
   const { data, isLoading, error } = useQuery({
@@ -159,6 +167,17 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
   }, [data?.messages.length, qc]);
 
   const upload = useMutation({ mutationFn: uploadMedia, onSuccess: setMedia, onError: (e: Error) => toast.error(e.message) });
+
+  // A draft reply from the AI, put in the box for the person to check and send.
+  const suggest = useMutation({
+    mutationFn: () => post<{ text: string }>(`/conversations/${convKey}/suggest`),
+    onSuccess: (r) => {
+      const before = text;
+      setText(r.text);
+      if (before.trim()) toast.success("Suggestion added", { action: { label: "Undo", onClick: () => setText(before) } });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const send = useMutation({
     mutationFn: () => post(`/conversations/${convKey}/send`, { text, mediaId: media?.id }),
@@ -247,8 +266,19 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
         )}
         <div className="flex items-end gap-2">
           <button onClick={() => fileRef.current?.click()} className="mb-1 rounded-lg p-2 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Attach file"><Paperclip className="size-5" /></button>
+          <button
+            onClick={() => suggest.mutate()}
+            disabled={suggest.isPending || data.messages.length === 0}
+            title="Suggest a reply with AI"
+            aria-label="Suggest a reply with AI"
+            className="mb-1 inline-flex items-center gap-1.5 rounded-lg bg-gold-soft px-2.5 py-2 text-[13px] font-semibold text-gold hover:brightness-95 disabled:opacity-50 dark:hover:brightness-125"
+          >
+            {suggest.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            <span className="hidden sm:inline">Suggest</span>
+          </button>
           <input ref={fileRef} type="file" hidden accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); e.target.value = ""; }} />
           <textarea
+            ref={replyRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {

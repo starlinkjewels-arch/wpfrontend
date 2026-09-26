@@ -168,6 +168,7 @@ export type Campaign = {
   startedAt?: number;
   finishedAt?: number;
   pausedReason?: string | null;
+  ai?: { personalize: boolean };
   note?: string;
   waiting: Waiting | null;
   eta: number | null;
@@ -207,9 +208,59 @@ export type Settings = {
   optOut: { enabled: boolean; keywords: string[]; reply: string };
   autoReply: { enabled: boolean; onlyNewContacts: boolean; cooldownHours: number; text: string };
   onboardingDismissed: boolean;
+  ai: AiSettings;
 };
 
-export type Day = { date: string; sent: number; failed: number; inbound: number; newContacts: number };
+export type Day = { date: string; sent: number; failed: number; inbound: number; newContacts: number; aiRequests?: number; aiTokens?: number };
+
+/* ── AI writer ──────────────────────────────────────────────────────── */
+
+export type AiTone = "professional" | "warm" | "luxury" | "friendly" | "concise";
+
+/** As the server shows it: the key itself is never sent, only whether one is set. */
+export type AiSettings = {
+  enabled: boolean;
+  model: string;
+  temperature: number;
+  reasoning: "off" | "low" | "medium" | "high";
+  tone: AiTone;
+  language: string;
+  businessProfile: string;
+  instructions: string;
+  hasKey: boolean;
+  keySource: "settings" | "server" | null;
+  keyHint: string | null;
+  /** Only ever sent TO the server, when the admin types a new key. */
+  apiKey?: string;
+  clearKey?: boolean;
+};
+
+export type AiStatus = {
+  enabled: boolean;
+  ready: boolean;
+  model: string;
+  models: string[];
+  tones: AiTone[];
+  language: string;
+  tone: AiTone;
+  demo: boolean;
+  usageToday: { requests: number; tokens: number };
+};
+
+export type AiDraftState = "ready" | "edited" | "outdated" | "missing";
+
+export type AiDraftRow = { phone: string; name: string; company: string; country: string; text: string; state: AiDraftState; at: number | null };
+
+export type AiJob = { campaignId: string; mode: string; total: number; done: number; failed: number; running: boolean; startedAt: number; finishedAt: number | null; lastError: string | null };
+
+export type AiDrafts = {
+  counts: Record<AiDraftState | "total", number>;
+  job: AiJob | null;
+  total: number;
+  page: number;
+  pageSize: number;
+  items: AiDraftRow[];
+};
 
 export type ContactsMeta = {
   tags: { tag: string; count: number }[];

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type ContactsMeta, type Settings, type Status } from "./api";
+import { api, type AiStatus, type ContactsMeta, type Settings, type Status } from "./api";
+
+/** Whether AI can be used right now, the model, and today's usage. */
+export function useAiStatus() {
+  return useQuery({ queryKey: ["ai-status"], queryFn: () => api<AiStatus>("/ai/status"), staleTime: 30000 });
+}
 
 /** Polled by every page: connection, unread count, what the runner is doing. */
 export function useStatus() {
