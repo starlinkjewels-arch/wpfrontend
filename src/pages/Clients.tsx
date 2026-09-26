@@ -73,6 +73,15 @@ export function ClientsPage() {
       return n;
     });
 
+  const selectPage = (v: boolean) => {
+    setAllMatching(false);
+    setSelected((s) => {
+      const n = new Set(s);
+      pageIds.forEach((id) => (v ? n.add(id) : n.delete(id)));
+      return n;
+    });
+  };
+
   const selectionBody = () => (allMatching ? { filter: Object.fromEntries(new URLSearchParams(filterQs)) } : { ids: [...selected] });
 
   const bulk = useMutation({
@@ -82,11 +91,32 @@ export function ClientsPage() {
       toast.success(`${verb} ${num(res.count)} client${res.count === 1 ? "" : "s"}`);
       setSelected(new Set());
       setAllMatching(false);
+      // Deleting a whole page would otherwise leave you on an empty one.
+      if (body.action === "delete") setPage(1);
       qc.invalidateQueries({ queryKey: ["contacts"] });
       qc.invalidateQueries({ queryKey: ["contacts-meta"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  /* Deleting everyone in the list is said in so many words, so "select all
+     matching" with no filter on can never be mistaken for deleting a few. */
+  async function deleteSelected() {
+    const everyone = allMatching && !filtering && selCount === (counts?.total ?? -1);
+    const ok = await confirm({
+      title: everyone ? `Delete ALL ${num(selCount)} clients?` : `Delete ${num(selCount)} client${selCount === 1 ? "" : "s"}?`,
+      body: (
+        <div className="space-y-1.5">
+          {everyone && <p className="font-semibold text-danger">This empties your whole client list.</p>}
+          <p>This cannot be undone. They are removed from future campaigns; campaigns already sent keep their results, and their chats stay in the inbox.</p>
+        </div>
+      ),
+      confirm: everyone ? "Delete all clients" : `Delete ${num(selCount)}`,
+      danger: true,
+    });
+    if (ok) bulk.mutate({ action: "delete" });
+  }
 
   async function campaignToSelected() {
     let ids = [...selected];
@@ -111,7 +141,7 @@ export function ClientsPage() {
         subtitle={counts ? `${num(counts.total)} clients · ${num(counts.active)} can receive campaigns` : "Your buyers and enquiries"}
         actions={
           <>
-            <Button icon={<Download className="size-4" />} onClick={doExport} disabled={!total} className="hidden sm:inline-flex">Export</Button>
+            <Button icon={<Download className="size-4" />} onClick={doExport} disabled={!total} className="max-sm:!hidden">Export</Button>
             <Button icon={<FileSpreadsheet className="size-4" />} onClick={() => navigate("/clients/import")}>Import Excel</Button>
             <Button variant="primary" icon={<UserPlus className="size-4" />} onClick={() => setDrawer({ open: true, contact: null })}>Add client</Button>
           </>
@@ -218,14 +248,7 @@ export function ClientsPage() {
                           label="Select page"
                           checked={pageAllSelected}
                           indeterminate={!pageAllSelected && pageIds.some((id) => selected.has(id))}
-                          onChange={(v) => {
-                            setAllMatching(false);
-                            setSelected((s) => {
-                              const n = new Set(s);
-                              pageIds.forEach((id) => (v ? n.add(id) : n.delete(id)));
-                              return n;
-                            });
-                          }}
+                          onChange={selectPage}
                         />
                       </th>
                       <th className="py-3 pr-3 font-medium">Client</th>
@@ -270,6 +293,10 @@ export function ClientsPage() {
                 </table>
 
                 {/* Mobile list */}
+                <label className="flex items-center gap-3 border-b border-line bg-surface-2/60 px-4 py-2.5 text-[13px] font-medium text-ink-2 md:hidden">
+                  <Checkbox label="Select all on this page" checked={pageAllSelected} indeterminate={!pageAllSelected && pageIds.some((id) => selected.has(id))} onChange={selectPage} />
+                  {pageAllSelected ? `All ${num(pageIds.length)} on this page selected` : "Select all on this page"}
+                </label>
                 <ul className="divide-y divide-line md:hidden">
                   {items.map((c) => (
                     <li key={c.id} className={clsx("flex items-center gap-3 px-4 py-3", selected.has(c.id) && "bg-brand-soft/40")} onClick={() => setDrawer({ open: true, contact: c })}>
@@ -304,11 +331,22 @@ export function ClientsPage() {
       {/* Bulk action bar */}
       {selCount > 0 && (
         <div className="animate-pop fixed inset-x-3 bottom-24 z-40 mx-auto flex max-w-2xl items-center gap-2 rounded-2xl border border-line bg-surface p-2 pl-4 shadow-pop lg:bottom-6 lg:left-[260px]">
-          <span className="mr-auto text-sm font-semibold">{num(selCount)} selected</span>
+          <span className="mr-auto whitespace-nowrap text-sm font-semibold">{num(selCount)} <span className="max-sm:hidden">selected</span></span>
           <Button size="sm" variant="primary" icon={<Megaphone className="size-4" />} onClick={campaignToSelected}>
             <span className="hidden sm:inline">Send campaign</span><span className="sm:hidden">Send</span>
           </Button>
-          <Button size="sm" icon={<TagIcon className="size-4" />} onClick={() => setTagModal("addTags")} className="hidden sm:inline-flex">Add tag</Button>
+          <Button size="sm" icon={<TagIcon className="size-4" />} onClick={() => setTagModal("addTags")} className="max-sm:!hidden">Add tag</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Trash2 className="size-4" />}
+            loading={bulk.isPending && bulk.variables?.action === "delete"}
+            onClick={deleteSelected}
+            className="!text-danger hover:!bg-danger-soft"
+            aria-label={`Delete ${selCount} selected clients`}
+          >
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
           <Menu align="right" trigger={() => <Button size="sm" variant="ghost" aria-label="More actions"><MoreHorizontal className="size-4" /></Button>}>
             {(close) => (
               <>
@@ -316,16 +354,7 @@ export function ClientsPage() {
                 <MenuItem icon={<X />} onClick={() => { close(); setTagModal("removeTags"); }}>Remove tag</MenuItem>
                 <MenuItem icon={<BellOff />} onClick={() => { close(); bulk.mutate({ action: "optOut" }); }}>Mark as opted out</MenuItem>
                 <MenuItem icon={<Bell />} onClick={() => { close(); bulk.mutate({ action: "optIn" }); }}>Mark as opted in</MenuItem>
-                <MenuItem
-                  icon={<Trash2 />}
-                  danger
-                  onClick={async () => {
-                    close();
-                    if (await confirm({ title: `Delete ${num(selCount)} clients?`, body: "This cannot be undone. Their chat history stays in the inbox.", confirm: "Delete", danger: true })) bulk.mutate({ action: "delete" });
-                  }}
-                >
-                  Delete
-                </MenuItem>
+                <MenuItem icon={<Trash2 />} danger onClick={() => { close(); deleteSelected(); }}>Delete {num(selCount)} clients</MenuItem>
               </>
             )}
           </Menu>

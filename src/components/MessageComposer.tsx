@@ -101,7 +101,7 @@ export function MessageComposer({
           <AiMenu text={message} onChange={onMessage} onWrite={() => setWriter(true)} />
           <div className="ml-auto flex items-center gap-1">
             <Button size="sm" variant="ghost" icon={<Library className="size-4" />} onClick={() => setTemplates(true)}>Templates</Button>
-            <Button size="sm" variant="ghost" icon={<BookmarkPlus className="size-4" />} onClick={() => setSaveTpl(true)} disabled={!message.trim() && !media} className="hidden sm:inline-flex">Save</Button>
+            <Button size="sm" variant="ghost" icon={<BookmarkPlus className="size-4" />} onClick={() => setSaveTpl(true)} disabled={!message.trim() && !media} className="max-sm:!hidden">Save</Button>
           </div>
         </div>
 

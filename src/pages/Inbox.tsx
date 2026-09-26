@@ -218,7 +218,7 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
             {c.tags.slice(0, 3).map((t) => <Tag key={t}>{t}</Tag>)}
           </div>
         )}
-        {c && <Button size="sm" variant="ghost" icon={<UserRound className="size-4" />} onClick={() => setDrawer(true)} className="hidden sm:inline-flex">Client</Button>}
+        {c && <Button size="sm" variant="ghost" icon={<UserRound className="size-4" />} onClick={() => setDrawer(true)} className="max-sm:!hidden">Client</Button>}
       </header>
 
       <div ref={scroller} className="chat-wallpaper scroll-thin flex-1 overflow-y-auto px-3 py-4 sm:px-8">

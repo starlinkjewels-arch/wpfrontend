@@ -108,7 +108,7 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
           {contact && (
             <Button
               variant="ghost"
-              className="mr-auto text-danger hover:bg-danger-soft hover:text-danger"
+              className="mr-auto !text-danger hover:!bg-danger-soft"
               icon={<Trash2 className="size-4" />}
               onClick={async () => {
                 if (await confirm({ title: `Delete ${contact.name || "this client"}?`, body: "They will be removed from your client list and from future campaigns.", confirm: "Delete", danger: true })) remove.mutate();

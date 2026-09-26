@@ -221,7 +221,7 @@ function AiSection({ s, up, dirty }: { s: Settings; up: (p: Partial<Settings>) =
               <div className="ml-auto flex gap-2">
                 <Button size="sm" variant="ghost" onClick={() => setReplacing(true)}>Replace</Button>
                 {ai.keySource === "settings" && (
-                  <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft hover:text-danger" onClick={() => set({ clearKey: true, hasKey: false, keyHint: null, keySource: null })}>Remove</Button>
+                  <Button size="sm" variant="ghost" className="!text-danger hover:!bg-danger-soft" onClick={() => set({ clearKey: true, hasKey: false, keyHint: null, keySource: null })}>Remove</Button>
                 )}
               </div>
             </div>
