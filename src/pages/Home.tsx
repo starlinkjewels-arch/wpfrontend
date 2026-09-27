@@ -2,9 +2,11 @@ import { Link, useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ArrowRight, Check, FileSpreadsheet, Megaphone, MessageCircle, Plus, QrCode, Sparkles, Users, X, CalendarClock, Send } from "lucide-react";
-import { api, put, type Campaign, type Contact, type Counts, type Day, type Health } from "../lib/api";
+import { api, put, type Campaign, type Contact, type Counts, type Day, type Health, type LeadBoard, type Savings } from "../lib/api";
+import { Radar, BadgeIndianRupee, CheckCircle2 } from "lucide-react";
+import { INTENT_LABEL, LeadBadge, WaitingChip, money } from "../components/LeadBits";
 import { ShieldCheck, ShieldAlert, AlertTriangle, TrendingUp } from "lucide-react";
-import { useStatus } from "../lib/hooks";
+import { useNow, useStatus } from "../lib/hooks";
 import { Avatar, Button, Card, CardHeader, Loading, Progress, Badge } from "../components/ui";
 import { SentChart } from "../components/SentChart";
 import { CampaignCard } from "../components/CampaignBits";
@@ -22,6 +24,8 @@ type Dashboard = {
   unread: number;
   onboarding: { connected: boolean; hasContacts: boolean; hasCampaign: boolean; dismissed: boolean };
   health: Health;
+  leads: LeadBoard;
+  savings: Savings;
 };
 
 function greeting() {
@@ -105,6 +109,8 @@ export function HomePage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="min-w-0 space-y-6">
+          {data.leads.enabled !== false && <LeadRadarCard board={data.leads} />}
+
           {live.length > 0 && (
             <section>
               <SectionTitle title="Live now" to="/campaigns" />
@@ -137,6 +143,7 @@ export function HomePage() {
         </div>
 
         <div className="min-w-0 space-y-6">
+          <SavingsCard s={data.savings} />
           <HealthCard health={data.health} />
 
           <Card>
@@ -179,6 +186,87 @@ export function HomePage() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Who is waiting for an answer — hot buyers first. */
+function LeadRadarCard({ board }: { board: LeadBoard }) {
+  const now = useNow(30000);
+  const rows = board.items.filter((r) => r.waiting).slice(0, 5);
+  return (
+    <Card className={clsx("overflow-hidden", board.counts.hotWaiting > 0 && "ring-2 ring-rose-400/40")}>
+      <CardHeader
+        title={<span className="inline-flex items-center gap-2"><Radar className="size-4 text-brand" /> Lead Radar</span>}
+        subtitle={
+          board.counts.waiting
+            ? <>{board.counts.hotWaiting > 0 && <b className="text-rose-500">{board.counts.hotWaiting} hot buyer{board.counts.hotWaiting === 1 ? "" : "s"} waiting · </b>}{board.counts.waiting} waiting for your reply</>
+            : "Nobody is waiting for you — every buyer has an answer"
+        }
+        action={<Link to="/leads" className="shrink-0 text-[13px] font-medium text-brand-text hover:underline">Open</Link>}
+      />
+      {rows.length === 0 ? (
+        <div className="flex items-center gap-3 px-5 pb-5 pt-3 text-[13px] text-ink-2">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-text"><CheckCircle2 className="size-[18px]" /></span>
+          Every message from a client is read and sorted: price, stock, catalogue or order requests are <b className="mx-1">hot</b> and show up here first.
+        </div>
+      ) : (
+        <ul className="mt-2 pb-2">
+          {rows.map((r) => (
+            <li key={r.key}>
+              <Link to={`/inbox/${r.key}`} className="flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-surface-2">
+                <Avatar name={r.name} seed={r.key} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-ink">{r.name || phone(r.key)}</span>
+                    <LeadBadge level={r.lead.level} />
+                  </div>
+                  <div className="truncate text-[12px] text-ink-2">
+                    <b className="font-medium">{INTENT_LABEL[r.lead.intent]}</b>{r.lead.summary ? ` — ${r.lead.summary}` : ""}
+                  </div>
+                </div>
+                {r.waitingSince && <WaitingChip since={r.waitingSince} alertHours={board.alertHours} now={now} />}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * The plainest reason to use this over an official-API tool: what the same
+ * messages would have cost there, at Meta's rate for each client's country.
+ */
+function SavingsCard({ s }: { s: Savings }) {
+  const total = money(s.inr, s.usd);
+  const month = money(s.monthInr, s.monthUsd);
+  const each = money(s.perBroadcast.inr, s.perBroadcast.usd);
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-brand-gradient p-5 text-white shadow-lg shadow-violet-500/25">
+      <div aria-hidden className="absolute -right-10 -top-10 size-40 rounded-full bg-white/15 blur-2xl" />
+      <div className="relative flex items-center justify-between gap-2">
+        <h3 className="text-[15px] font-semibold">Saved vs the official API</h3>
+        <BadgeIndianRupee className="size-5 text-white/80" />
+      </div>
+      <div className="relative mt-3 font-display text-[34px] font-extrabold leading-none tracking-tight">{total.inr}</div>
+      <p className="relative mt-1.5 text-[13px] text-white/80">
+        ≈ {total.usd} on {num(s.messages)} broadcast messages{s.monthUsd > 0 ? ` · ${month.inr} this month` : ""}
+      </p>
+      {s.perBroadcast.clients > 0 && (
+        <p className="relative mt-3 rounded-xl bg-white/15 px-3 py-2 text-[12.5px] leading-snug">
+          Every broadcast to all <b>{num(s.perBroadcast.clients)}</b> clients saves <b>{each.inr}</b> <span className="text-white/75">(≈ {each.usd})</span>
+        </p>
+      )}
+      <ul className="relative mt-4 space-y-1.5 border-t border-white/20 pt-3 text-[12px] text-white/90">
+        {["No charge per message — your own number", "Post in WhatsApp groups and Status (the API can't)", "No template approval — send any message, any time"].map((t) => (
+          <li key={t} className="flex items-start gap-2"><Check className="mt-0.5 size-3.5 shrink-0" />{t}</li>
+        ))}
+      </ul>
+      <p className="relative mt-3 text-[11px] text-white/65" title={`Meta’s marketing-message price for each recipient’s country, before any provider’s fees. Rupees at ₹${s.usdInr} per dollar.`}>
+        At Meta's rate for each client's country (card of {new Date(s.ratesAsOf).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}), before provider fees.
+      </p>
+    </div>
   );
 }
 

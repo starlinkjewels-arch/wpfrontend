@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Eye, EyeOff, Lock, ShieldCheck, Sparkles, Users, CalendarClock } from "lucide-react";
+import { Eye, EyeOff, Lock, ShieldCheck, Sparkles, Users, CalendarClock, Radar, QrCode } from "lucide-react";
 import { api, auth, ApiError } from "../lib/api";
 import { Button, Label } from "../components/ui";
 import { Logo } from "../components/Logo";
@@ -62,9 +62,11 @@ export function LoginPage() {
             Import your buyers from Excel, write one message, and let it reach each of them by name on WhatsApp — one by one, at the time you choose.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-white/80">
-            <li className="flex items-center gap-3"><Users className="size-4 text-pink-300" /> Clients from any country, cleaned automatically</li>
-            <li className="flex items-center gap-3"><CalendarClock className="size-4 text-pink-300" /> Schedule campaigns, safe sending speed</li>
-            <li className="flex items-center gap-3"><ShieldCheck className="size-4 text-pink-300" /> New enquiries saved as clients by themselves</li>
+            <li className="flex items-center gap-3"><Radar className="size-4 shrink-0 text-pink-300" /> Lead Radar — buyers asking for prices answered first</li>
+            <li className="flex items-center gap-3"><QrCode className="size-4 shrink-0 text-pink-300" /> Trade-show QR codes that turn scans into clients</li>
+            <li className="flex items-center gap-3"><Users className="size-4 shrink-0 text-pink-300" /> AI writes each buyer their own message, in their time zone</li>
+            <li className="flex items-center gap-3"><CalendarClock className="size-4 shrink-0 text-pink-300" /> Broadcasts, groups and Status — safe speed, scheduled</li>
+            <li className="flex items-center gap-3"><ShieldCheck className="size-4 shrink-0 text-pink-300" /> Your own number: no per-message fees, no template approval</li>
           </ul>
         </div>
       </div>

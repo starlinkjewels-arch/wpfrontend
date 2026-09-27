@@ -22,6 +22,7 @@ import { GroupsPage } from "./pages/Groups";
 import { BatchesPage } from "./pages/Batches";
 import { BatchDetailPage } from "./pages/BatchDetail";
 import { SettingsPage } from "./pages/Settings";
+import { LeadsPage } from "./pages/Leads";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
       { path: "/groups", element: <GroupsPage /> },
       { path: "/batches", element: <BatchesPage /> },
       { path: "/batches/:id", element: <BatchDetailPage /> },
+      { path: "/leads", element: <LeadsPage /> },
       { path: "/templates", element: <TemplatesPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },

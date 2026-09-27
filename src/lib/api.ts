@@ -107,6 +107,7 @@ export type Status = {
   dataError: string | null;
   wa: WaState;
   unread: number;
+  hotWaiting?: number;
   runner: { activeId: string | null; waiting: Waiting | null };
   sentToday: number;
   dailyLimit: number | null;
@@ -134,7 +135,57 @@ export type Contact = {
   updatedAt: number;
   lastMessageAt?: number;
   lastCampaignAt?: number;
+  lead?: { level: LeadLevel; intent: LeadIntent; summary: string; at: number };
+  leadSource?: string;
 };
+
+/* ── Lead Radar & lead links ────────────────────────────────────────── */
+
+export type LeadLevel = "hot" | "warm" | "cold" | "none";
+export type LeadIntent = "order" | "price" | "catalogue" | "stock" | "meeting" | "question" | "not_interested" | "thanks" | "link" | "other";
+export type Lead = { level: LeadLevel; intent: LeadIntent; summary: string; at: number; by?: "rules" | "ai" | "you"; firstHotAt?: number };
+
+export type LeadRow = {
+  key: string;
+  name: string;
+  company: string;
+  country: string;
+  lead: Lead;
+  lastText: string;
+  lastAt: number;
+  waiting: boolean;
+  waitingSince: number | null;
+};
+
+export type LeadBoard = {
+  items: LeadRow[];
+  counts: { hot: number; warm: number; waiting: number; hotWaiting: number };
+  alertHours: number;
+  enabled?: boolean;
+};
+
+export type LeadSource = "event" | "card" | "website" | "instagram" | "catalogue" | "other";
+
+export type LeadLink = {
+  id: string;
+  name: string;
+  code: string;
+  source: LeadSource;
+  prefill: string;
+  tags: string[];
+  batchId: string | null;
+  batchName: string | null;
+  batchMissing: boolean;
+  welcome: string;
+  active: boolean;
+  leads: number;
+  lastLeadAt: number | null;
+  createdAt: number;
+  text: string;
+  url: string | null;
+};
+
+export type Savings = { usd: number; inr: number; messages: number; perBroadcast: { usd: number; inr: number; clients: number }; monthUsd: number; monthInr: number; ratesAsOf: string; usdInr: number };
 
 export type Counts = { total: number; active: number; optedOut: number; invalid: number; inbound: number };
 
@@ -221,6 +272,7 @@ export type Conversation = {
   unread: number;
   isNew: boolean;
   optedOut: boolean;
+  lead?: Lead;
 };
 
 export type ChatMessage = { id: string; dir: "in" | "out"; text: string; at: number; campaignId?: string; mediaType?: string; status?: "delivered" | "read" };
@@ -242,6 +294,7 @@ export type Settings = {
   optOut: { enabled: boolean; keywords: string[]; reply: string };
   autoReply: { enabled: boolean; onlyNewContacts: boolean; cooldownHours: number; text: string };
   onboardingDismissed: boolean;
+  leadRadar: { enabled: boolean; useAi: boolean; alertHours: number };
   ai: AiSettings;
 };
 

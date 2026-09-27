@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { Building2, Clock, ShieldCheck, Bot, Save, Info, Database, Sparkles, KeyRound, ExternalLink, FlaskConical, Check, TrendingUp, Globe2, Coffee } from "lucide-react";
+import { Building2, Clock, ShieldCheck, Bot, Save, Info, Database, Sparkles, KeyRound, ExternalLink, FlaskConical, Check, TrendingUp, Globe2, Coffee, Radar } from "lucide-react";
 import { post, put, type AiSettings, type AiTone, type Settings } from "../lib/api";
 import { useAiStatus, useSettings, useStatus } from "../lib/hooks";
 import { Badge, Button, Callout, Card, Label, Loading, PageHeader, Segmented, Switch } from "../components/ui";
@@ -50,7 +50,7 @@ export function SettingsPage() {
 
       <div className="grid gap-6 xl:grid-cols-[200px_minmax(0,1fr)]">
         <nav className="hidden space-y-1 text-[13px] font-medium xl:sticky xl:top-8 xl:block xl:self-start">
-          {[["business", "Business"], ["ai", "AI writer"], ["safety", "Sending safety"], ["inbound", "Incoming messages"], ["system", "System"]].map(([id, label]) => (
+          {[["business", "Business"], ["ai", "AI writer"], ["safety", "Sending safety"], ["inbound", "Incoming messages"], ["leads", "Lead Radar"], ["system", "System"]].map(([id, label]) => (
             <a key={id} href={`#${id}`} className="block rounded-lg px-3 py-2 text-ink-2 hover:bg-surface-2 hover:text-ink">{label}</a>
           ))}
         </nav>
@@ -244,6 +244,34 @@ export function SettingsPage() {
                         hours per client
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Section>
+
+          <Section id="leads" icon={<Radar />} title="Lead Radar" subtitle="Sorts every incoming message so the buyers ready to order are answered first.">
+            <div className="space-y-4">
+              <div className="rounded-xl border border-line p-4">
+                <Switch
+                  checked={s.leadRadar.enabled}
+                  onChange={(v) => up({ leadRadar: { ...s.leadRadar, enabled: v } })}
+                  label="Sort incoming messages"
+                  description="Price, stock, catalogue, meeting or order requests are marked hot; general questions warm; “not interested” cold. Shown on Home, in Leads and in the Inbox."
+                />
+                {s.leadRadar.enabled && (
+                  <div className="mt-4 space-y-4">
+                    <Switch
+                      checked={s.leadRadar.useAi}
+                      onChange={(v) => up({ leadRadar: { ...s.leadRadar, useAi: v } })}
+                      label="Let the AI read the conversation too"
+                      description={s.ai.hasKey ? "Adds a one-line note of what the buyer wants (e.g. “Price for 20 pcs 1ct+ GIA ovals”). Uses a small AI request per message." : "Needs a Sarvam API key in AI writer above. Without it, sorting still works by wording."}
+                    />
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+                      Warn me when a buyer has waited
+                      <input type="number" min={1} max={72} className="field w-20" value={s.leadRadar.alertHours} onChange={(e) => up({ leadRadar: { ...s.leadRadar, alertHours: Number(e.target.value) } })} />
+                      hours for an answer
+                    </div>
                   </div>
                 )}
               </div>

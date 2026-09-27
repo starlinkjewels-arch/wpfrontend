@@ -4,14 +4,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
 import { ArrowLeft, Check, CheckCheck, MessagesSquare, Paperclip, Search, SendHorizontal, UserRound, Megaphone, Sparkles, FlaskConical, X, Loader2, BellOff } from "lucide-react";
-import { api, post, uploadMedia, type ChatMessage, type Contact, type Conversation, type Media } from "../lib/api";
+import { api, post, put, uploadMedia, type ChatMessage, type Contact, type Conversation, type LeadLevel, type Media } from "../lib/api";
+import { INTENT_LABEL, LEAD_LEVELS, LeadBadge } from "../components/LeadBits";
 import { useDebounced, useStatus } from "../lib/hooks";
-import { Avatar, Badge, Button, Empty, Loading, Segmented, Tag } from "../components/ui";
+import { Avatar, Badge, Button, Empty, Loading, Tag } from "../components/ui";
 import { WaText } from "../components/PhonePreview";
 import { ClientDrawer } from "../components/ClientDrawer";
 import { chatTime, flag, phone, time } from "../lib/format";
 
-type Filter = "all" | "unread" | "new";
+type Filter = "all" | "unread" | "hot" | "waiting" | "new";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "unread", label: "Unread" },
+  { value: "hot", label: "🔥 Hot" },
+  { value: "waiting", label: "Waiting" },
+  { value: "new", label: "New" },
+];
 
 export function InboxPage() {
   const { key } = useParams();
@@ -57,23 +66,34 @@ export function InboxPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
             <input className="field h-9 pl-9" placeholder="Search chats" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <Segmented<Filter>
-            className="mt-3 w-full [&>button]:flex-1 [&>button]:justify-center"
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: "all", label: "All" },
-              { value: "unread", label: "Unread", count: list.data?.unread || undefined },
-              { value: "new", label: "New enquiries" },
-            ]}
-          />
+          {/* Chips, not a segmented bar: five of them wrap to fit a 360px column and a phone. */}
+          <div className="mt-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Filter chats">
+            {FILTERS.map((f) => {
+              const n = f.value === "unread" ? list.data?.unread : f.value === "hot" ? status?.hotWaiting : 0;
+              return (
+                <button
+                  key={f.value}
+                  role="tab"
+                  aria-selected={filter === f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={clsx(
+                    "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    filter === f.value ? "bg-brand-gradient text-white shadow-sm" : "bg-surface-2 text-ink-2 hover:text-ink",
+                  )}
+                >
+                  {f.label}
+                  {n ? <span className={clsx("rounded-full px-1.5 text-[10.5px] font-semibold", filter === f.value ? "bg-white/25" : "bg-brand text-white")}>{n}</span> : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="scroll-thin flex-1 overflow-y-auto">
           {list.isLoading ? (
             <Loading />
           ) : items.length === 0 ? (
             <Empty icon={<MessagesSquare className="size-6" />} title={filter === "all" && !dq ? "No chats yet" : "Nothing here"}>
-              {filter === "all" && !dq ? "When clients reply to a campaign or message you first, the chat appears here." : "Try another filter."}
+              {filter === "all" && !dq ? "When clients reply to a campaign or message you first, the chat appears here." : filter === "waiting" ? "Everyone has an answer from you." : filter === "hot" ? "Buyers asking for prices, stock, the catalogue or an order show up here." : "Try another filter."}
             </Empty>
           ) : (
             items.map((c) => (
@@ -86,7 +106,10 @@ export function InboxPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className={clsx("truncate text-sm", c.unread ? "font-semibold text-ink" : "font-medium text-ink")}>{c.name || phone(c.phone)}</span>
-                    <span className={clsx("shrink-0 text-[11px]", c.unread ? "font-semibold text-brand-text" : "text-ink-3")}>{chatTime(c.lastAt)}</span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {c.lead && (c.lead.level === "hot" || c.lead.level === "warm") && <LeadBadge level={c.lead.level} short />}
+                      <span className={clsx("text-[11px]", c.unread ? "font-semibold text-brand-text" : "text-ink-3")}>{chatTime(c.lastAt)}</span>
+                    </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5">
                     {c.lastDir === "out" && <CheckCheck className="size-3.5 shrink-0 text-ink-3" />}
@@ -185,12 +208,15 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
       setText("");
       setMedia(null);
       qc.invalidateQueries({ queryKey: ["chat", convKey] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["status"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   if (isLoading) return <Loading />;
   if (error || !data) return <p className="p-10 text-center text-sm text-ink-3">Chat not found.</p>;
+  const lead = data.conversation?.lead;
 
   const c = data.contact;
   const name = c?.name || data.conversation?.name || phone(convKey);
@@ -220,6 +246,8 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
         )}
         {c && <Button size="sm" variant="ghost" icon={<UserRound className="size-4" />} onClick={() => setDrawer(true)} className="max-sm:!hidden">Client</Button>}
       </header>
+
+      {lead && lead.level !== "none" && <LeadBar convKey={convKey} level={lead.level} intent={INTENT_LABEL[lead.intent] ?? ""} summary={lead.summary} ai={lead.by === "ai"} />}
 
       <div ref={scroller} className="chat-wallpaper scroll-thin flex-1 overflow-y-auto px-3 py-4 sm:px-8">
         {data.messages.length === 0 && <p className="mt-10 text-center text-[13px] text-ink-3">No messages yet. Say hello!</p>}
@@ -310,5 +338,41 @@ function Chat({ convKey, onBack }: { convKey: string; onBack: () => void }) {
       </div>
       <ClientDrawer open={drawer} contact={c} onClose={() => { setDrawer(false); qc.invalidateQueries({ queryKey: ["chat", convKey] }); }} />
     </>
+  );
+}
+
+/** What Lead Radar made of this client, and a one-tap way to correct it. */
+function LeadBar({ convKey, level, intent, summary, ai }: { convKey: string; level: LeadLevel; intent: string; summary: string; ai: boolean }) {
+  const qc = useQueryClient();
+  const set = useMutation({
+    mutationFn: (l: LeadLevel) => put(`/conversations/${convKey}/lead`, { level: l }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["chat", convKey] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["status"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line bg-surface-2/70 px-3 py-2 sm:px-4">
+      <LeadBadge level={level} />
+      <p className="min-w-0 flex-1 truncate text-[12.5px] text-ink-2">
+        <b className="font-semibold text-ink">{intent}</b>{summary ? ` — ${summary}` : ""}
+        {ai && <span className="ml-1.5 rounded bg-brand-soft px-1 py-px text-[9.5px] font-bold uppercase tracking-wide text-brand-text">AI</span>}
+      </p>
+      <div className="flex shrink-0 items-center gap-1">
+        {(["hot", "warm", "cold"] as const).map((l) => (
+          <button
+            key={l}
+            disabled={set.isPending || l === level}
+            onClick={() => set.mutate(l)}
+            className={clsx("rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors", l === level ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-ink-3 hover:bg-surface hover:text-ink")}
+          >
+            {l === "cold" ? "Done" : LEAD_LEVELS[l].label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

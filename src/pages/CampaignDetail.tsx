@@ -9,6 +9,8 @@ import { useDebounced } from "../lib/hooks";
 import { Badge, Button, Card, Loading, Menu, MenuItem, Segmented, useConfirm, Avatar } from "../components/ui";
 import { StatusBadge, WaitingLine } from "../components/CampaignBits";
 import { PhonePreview } from "../components/PhonePreview";
+import { money } from "../components/LeadBits";
+import { BadgeIndianRupee } from "lucide-react";
 import { dateTime, friendlyWhen, num, pct, phone, time } from "../lib/format";
 
 type RFilter = "all" | "sent" | "pending" | "failed" | "skipped" | "replied" | "no-reply";
@@ -43,6 +45,14 @@ export function CampaignDetailPage() {
     queryFn: () => api<{ items: Recipient[]; total: number; pageSize: number }>(`/campaigns/${id}/recipients?status=${rf}&q=${encodeURIComponent(dq)}&page=${page}&pageSize=50`),
     refetchInterval: live ? 3000 : false,
     placeholderData: keepPreviousData,
+  });
+
+  // What these messages would have cost on the official API. Re-read as the count grows.
+  const savings = useQuery({
+    queryKey: ["campaign-savings", id, c?.stats?.sent ?? 0],
+    queryFn: () => api<{ usd: number; inr: number; messages: number }>(`/campaigns/${id}/savings`),
+    enabled: Boolean(c?.stats?.sent) && c?.audience.mode !== "groups",
+    staleTime: 60000,
   });
 
   // The preview shows the message as the first client received it, not the raw {{placeholders}}.
@@ -206,6 +216,14 @@ export function CampaignDetailPage() {
                 <Funnel label="Replied" value={s.replied ?? 0} of={s.sent} icon={<MessageCircleReply />} accent="text-brand-text" />
                 <Funnel label="Opted out" value={s.optedOut ?? 0} of={s.sent} icon={<BellOff />} accent={(s.optedOut ?? 0) > 0 ? "text-warn" : undefined} />
               </div>
+              {savings.data && savings.data.messages > 0 && (
+                <p className="mt-4 flex items-center gap-2 rounded-xl bg-brand-soft px-3 py-2 text-[13px] text-brand-text">
+                  <BadgeIndianRupee className="size-4 shrink-0" />
+                  <span>
+                    <b>{money(savings.data.inr, savings.data.usd).inr}</b> saved — {num(savings.data.messages)} messages would cost ≈ {money(savings.data.inr, savings.data.usd).usd} on WhatsApp’s official API.
+                  </span>
+                </p>
+              )}
               {c.materialized && ["completed", "cancelled", "paused", "running"].includes(c.status) && (
                 <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
                   <span className="mr-1 text-[13px] font-medium text-ink-2">Follow up with:</span>

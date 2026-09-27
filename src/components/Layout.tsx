@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import clsx from "clsx";
-import { Home, Megaphone, Users, UsersRound, Layers, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
+import { Radar, Home, Megaphone, Users, UsersRound, Layers, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStatus } from "../lib/hooks";
 import { auth } from "../lib/api";
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/batches", label: "Batches", icon: Layers },
   { to: "/groups", label: "Groups", icon: UsersRound },
   { to: "/inbox", label: "Inbox", icon: MessagesSquare, badge: "unread" as const },
+  { to: "/leads", label: "Leads", icon: Radar, badge: "hot" as const },
   { to: "/templates", label: "Templates", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
@@ -79,7 +80,7 @@ export function Layout() {
     navigate("/login", { replace: true });
   };
 
-  const badge = (key?: "unread") => (key === "unread" && status?.unread ? status.unread : 0);
+  const badge = (key?: "unread" | "hot") => (key === "unread" ? status?.unread ?? 0 : key === "hot" ? status?.hotWaiting ?? 0 : 0);
   const onConnectPage = location.pathname === "/whatsapp";
   const disconnected = status && status.wa.status !== "connected" && !onConnectPage;
 
@@ -152,6 +153,7 @@ export function Layout() {
           >
             {(close) => (
               <>
+                <MenuItem icon={<Radar />} onClick={() => { close(); navigate("/leads"); }}>Leads &amp; QR codes{status?.hotWaiting ? ` (${status.hotWaiting} hot)` : ""}</MenuItem>
                 <MenuItem icon={<Layers />} onClick={() => { close(); navigate("/batches"); }}>Client batches</MenuItem>
                 <MenuItem icon={<UsersRound />} onClick={() => { close(); navigate("/groups"); }}>WhatsApp groups</MenuItem>
                 <MenuItem icon={<FileText />} onClick={() => { close(); navigate("/templates"); }}>Templates</MenuItem>

@@ -8,6 +8,7 @@ import { batchColor } from "../lib/batchColors";
 import { useMeta } from "../lib/hooks";
 import { Badge, Button, Drawer, Label, Switch, useConfirm } from "./ui";
 import { TagInput } from "./TagInput";
+import { LeadBadge } from "./LeadBits";
 import { COUNTRY_OPTIONS, countryName, date, flag, phone as fmtPhone } from "../lib/format";
 
 type Form = {
@@ -143,6 +144,8 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
           <span>Added {date(contact.createdAt)}</span>
           {contact.source === "inbound" && <Badge tone="gold">Wrote to us first</Badge>}
           {contact.waStatus === "invalid" && <Badge tone="danger">Not on WhatsApp</Badge>}
+          {contact.lead && contact.lead.level !== "none" && <LeadBadge level={contact.lead.level} />}
+          {contact.leadSource && <Badge tone="info">Came from {contact.leadSource}</Badge>}
           <Link to={`/inbox/${contact.id}`} className="ml-auto inline-flex items-center gap-1 font-medium text-brand-text hover:underline">
             <MessageCircle className="size-3.5" /> Chat
           </Link>
