@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Megaphone, Plus } from "lucide-react";
+import { Megaphone, Plus, CircleDashed, UsersRound, Info, X } from "lucide-react";
+import { StatusComposer } from "../components/StatusComposer";
+import { local } from "../lib/storage";
 import { api, type Campaign } from "../lib/api";
 import { Button, Card, Empty, Loading, PageHeader, Segmented } from "../components/ui";
 import { CampaignCard } from "../components/CampaignBits";
@@ -11,6 +13,8 @@ type Filter = "all" | "active" | "draft" | "completed";
 export function CampaignsPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [hideTip, setHideTip] = useState(() => local.get("sl.hide-broadcast-tip", false));
   const { data, isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => api<{ items: Campaign[] }>("/campaigns"),
@@ -26,15 +30,31 @@ export function CampaignsPage() {
   return (
     <>
       <PageHeader
-        title="Campaigns"
-        subtitle="One message, personalised and sent to each client one by one."
-        actions={<Button variant="primary" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>New campaign</Button>}
+        title="Broadcasts"
+        subtitle="One message to many clients or groups — personalised, sent one by one at a safe pace."
+        actions={
+          <>
+            <Button icon={<CircleDashed className="size-4" />} onClick={() => setStatusOpen(true)}>Post to Status</Button>
+            <Button icon={<UsersRound className="size-4" />} onClick={() => navigate("/groups")} className="max-sm:!hidden">Groups</Button>
+            <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>New broadcast</Button>
+          </>
+        }
       />
+      {!hideTip && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl bg-info-soft px-4 py-3 text-[13px] text-info">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <span className="flex-1">
+            <b>Better than a WhatsApp broadcast list.</b> WhatsApp's own lists only reach people who saved your number. Broadcasts here go to each client individually — everyone receives them, with their own name — and can also post into your WhatsApp groups.
+          </span>
+          <button onClick={() => { setHideTip(true); local.set("sl.hide-broadcast-tip", true); }} className="text-info/70 hover:text-info" aria-label="Hide tip"><X className="size-4" /></button>
+        </div>
+      )}
+      <StatusComposer open={statusOpen} onClose={() => setStatusOpen(false)} />
       {isLoading ? (
         <Loading />
       ) : items.length === 0 ? (
         <Card>
-          <Empty icon={<Megaphone className="size-6" />} title="No campaigns yet" action={<Button variant="primary" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>Create your first campaign</Button>}>
+          <Empty icon={<Megaphone className="size-6" />} title="No broadcasts yet" action={<Button variant="primary" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>Create your first broadcast</Button>}>
             Announce a new collection, share a price list or invite buyers to a show — every client gets it with their own name.
           </Empty>
         </Card>

@@ -88,7 +88,7 @@ export function CampaignCard({ c }: { c: Campaign }) {
           </div>
         ) : (
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-ink-3">
-            <span className="flex items-center gap-1.5"><Users className="size-3.5" />{num(total)} clients</span>
+            <span className="flex items-center gap-1.5"><Users className="size-3.5" />{num(total)} {c.audience.mode === "groups" ? "groups" : "clients"}</span>
             {c.status === "completed" && s && (
               <>
                 <span className="flex items-center gap-1.5 text-brand-text"><CheckCircle2 className="size-3.5" />{num(s.sent)} sent</span>

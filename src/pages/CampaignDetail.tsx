@@ -48,7 +48,8 @@ export function CampaignDetailPage() {
   // The preview shows the message as the first client received it, not the raw {{placeholders}}.
   const rendered = useQuery({
     queryKey: ["render-detail", c?.message],
-    queryFn: () => post<{ text: string; contact: { name: string } }>("/render", { message: c!.message }),
+    // A group broadcast previews with the first group's name filled in.
+    queryFn: () => post<{ text: string; contact: { name: string } }>("/render", { message: c!.message, contactId: c!.audience.mode === "groups" ? c!.audience.groupIds?.[0] : undefined }),
     enabled: Boolean(c?.message),
     staleTime: Infinity,
   });
@@ -105,7 +106,7 @@ export function CampaignDetailPage() {
   return (
     <>
       <Link to="/campaigns" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-3 hover:text-ink">
-        <ArrowLeft className="size-4" /> Campaigns
+        <ArrowLeft className="size-4" /> Broadcasts
       </Link>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -193,7 +194,7 @@ export function CampaignDetailPage() {
           </Card>
 
           {/* What happened after sending */}
-          {s.sent > 0 && (
+          {s.sent > 0 && c.audience.mode !== "groups" && (
             <Card className="p-5 sm:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-[15px] font-semibold">How clients responded</h3>
@@ -235,7 +236,7 @@ export function CampaignDetailPage() {
                     { value: "pending", label: "Waiting", count: s.pending },
                     { value: "failed", label: "Failed", count: s.failed },
                     { value: "skipped", label: "Skipped", count: s.skipped },
-                    ...(s.sent ? [{ value: "replied" as RFilter, label: "Replied", count: s.replied ?? 0 }, { value: "no-reply" as RFilter, label: "No reply", count: noReply }] : []),
+                    ...(s.sent && c.audience.mode !== "groups" ? [{ value: "replied" as RFilter, label: "Replied", count: s.replied ?? 0 }, { value: "no-reply" as RFilter, label: "No reply", count: noReply }] : []),
                   ]}
                 />
               </div>
@@ -248,9 +249,9 @@ export function CampaignDetailPage() {
               {(recips.data?.items ?? []).map((r) => (
                 <li key={r.phone} className="flex items-center gap-3 px-4 py-2.5">
                   <Avatar name={r.name} seed={r.phone} size={32} />
-                  <Link to={`/inbox/${r.phone}`} className="min-w-0 flex-1 hover:underline">
+                  <Link to={r.isGroup ? "/groups" : `/inbox/${r.phone}`} className="min-w-0 flex-1 hover:underline">
                     <div className="truncate text-sm font-medium">{r.name || phone(r.phone)}</div>
-                    <div className="truncate text-[12px] text-ink-3">{phone(r.phone)}{r.company && ` · ${r.company}`}</div>
+                    <div className="truncate text-[12px] text-ink-3">{r.isGroup ? "WhatsApp group" : phone(r.phone)}{r.company && ` · ${r.company}`}</div>
                   </Link>
                   <div className="flex shrink-0 flex-col items-end gap-0.5">
                     <RecipientBadge r={r} />
@@ -277,14 +278,14 @@ export function CampaignDetailPage() {
           <PhonePreview text={rendered.data?.text ?? c.message} media={c.media} contactName={rendered.data?.contact.name} />
           <Card className="space-y-2.5 p-4 text-[13px]">
             <Row icon={<Users />} label="Audience">
-              {c.audience.mode === "all" ? "All clients" : c.audience.mode === "tags" ? `Tags: ${c.audience.tags.join(", ")}` : `${num(c.audience.contactIds.length)} picked clients`}
+              {c.audience.mode === "all" ? "All clients" : c.audience.mode === "tags" ? `Tags: ${c.audience.tags.join(", ")}` : c.audience.mode === "groups" ? `WhatsApp groups${c.audience.groupTags?.length ? ` · tags: ${c.audience.groupTags.join(", ")}` : ""}${c.audience.groupIds?.length ? ` · ${num(c.audience.groupIds.length)} picked` : ""}` : `${num(c.audience.contactIds.length)} picked clients`}
             </Row>
             {c.audience.excludeTags.length > 0 && <Row icon={<Ban />} label="Left out">{c.audience.excludeTags.join(", ")}</Row>}
             <Row icon={<Clock3 />} label="Gap">{c.minDelay}–{c.maxDelay} seconds</Row>
             {c.ai?.personalize && <Row icon={<Sparkles />} label="Writing">AI writes each client their own message</Row>}
             {c.scheduledAt && <Row icon={<CalendarClock />} label="Scheduled">{dateTime(c.scheduledAt)}</Row>}
           </Card>
-          <p className="px-1 text-[12px] leading-relaxed text-ink-3">Each client sees their own name and details.</p>
+          <p className="px-1 text-[12px] leading-relaxed text-ink-3">{c.audience.mode === "groups" ? "Each group sees its own name." : "Each client sees their own name and details."}</p>
         </aside>
       </div>
     </>

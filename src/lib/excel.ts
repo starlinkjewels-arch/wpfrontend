@@ -156,3 +156,12 @@ export async function exportContacts(items: Contact[], fileName = "clients.xlsx"
   XLSX.utils.book_append_sheet(wb, ws, "Clients");
   XLSX.writeFile(wb, fileName);
 }
+
+/** Any list of plain rows to an .xlsx file — used for group member lists. */
+export async function exportRows(rows: Record<string, unknown>[], fileName: string, sheet = "Sheet1") {
+  const XLSX = await loadXLSX();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 31));
+  XLSX.writeFile(wb, fileName);
+}

@@ -62,7 +62,7 @@ export function HomePage() {
             Import clients
           </Button>
           <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>
-            New campaign
+            New broadcast
           </Button>
         </div>
       </div>

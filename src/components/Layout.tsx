@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import clsx from "clsx";
-import { Home, Megaphone, Users, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
+import { Home, Megaphone, Users, UsersRound, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStatus } from "../lib/hooks";
 import { auth } from "../lib/api";
@@ -11,8 +11,9 @@ import { Logo } from "./Logo";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/campaigns", label: "Campaigns", icon: Megaphone },
+  { to: "/campaigns", label: "Broadcasts", icon: Megaphone },
   { to: "/clients", label: "Clients", icon: Users },
+  { to: "/groups", label: "Groups", icon: UsersRound },
   { to: "/inbox", label: "Inbox", icon: MessagesSquare, badge: "unread" as const },
   { to: "/templates", label: "Templates", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -89,7 +90,7 @@ export function Layout() {
           <Logo name={status?.businessName} />
         </div>
         <Button variant="primary" className="mt-6 w-full" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>
-          New campaign
+          New broadcast
         </Button>
         <nav className="mt-5 flex flex-col gap-0.5">
           {NAV.map(({ to, label, icon: Icon, end, badge: b }) => (
@@ -146,6 +147,7 @@ export function Layout() {
           >
             {(close) => (
               <>
+                <MenuItem icon={<UsersRound />} onClick={() => { close(); navigate("/groups"); }}>WhatsApp groups</MenuItem>
                 <MenuItem icon={<FileText />} onClick={() => { close(); navigate("/templates"); }}>Templates</MenuItem>
                 <MenuItem icon={<Settings />} onClick={() => { close(); navigate("/settings"); }}>Settings</MenuItem>
                 <MenuItem icon={dark ? <Sun /> : <Moon />} onClick={() => { close(); toggle(); }}>{dark ? "Light mode" : "Dark mode"}</MenuItem>
@@ -180,11 +182,11 @@ export function Layout() {
 
       {/* ── Tab bar (mobile) ── */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 px-1 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 backdrop-blur lg:hidden">
-        {[NAV[0], NAV[1], { to: "/campaigns/new", label: "New", icon: Plus, fab: true }, NAV[2], NAV[3]].map((item) => {
+        {[NAV[0], NAV[1], { to: "/campaigns/new", label: "New", icon: Plus, fab: true }, NAV[2], NAV[4]].map((item) => {
           const Icon = item.icon;
           if ("fab" in item) {
             return (
-              <button key="fab" onClick={() => navigate(item.to)} className="flex flex-col items-center gap-0.5" aria-label="New campaign">
+              <button key="fab" onClick={() => navigate(item.to)} className="flex flex-col items-center gap-0.5" aria-label="New broadcast">
                 <span className="-mt-5 flex size-12 items-center justify-center rounded-2xl bg-brand text-white shadow-pop">
                   <Icon className="size-6" />
                 </span>

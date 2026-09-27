@@ -24,12 +24,15 @@ export function MessageComposer({
   media,
   onMedia,
   missing = [],
+  groupMode = false,
 }: {
   message: string;
   onMessage: (m: string) => void;
   media: Media | null;
   onMedia: (m: Media | null) => void;
   missing?: { key: string; label: string; missing: number }[];
+  /** Posting into WhatsApp groups: the only variable is the group's name. */
+  groupMode?: boolean;
 }) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -130,10 +133,15 @@ export function MessageComposer({
         {/* Variables */}
         <div className="border-t border-line px-3 py-2.5">
           <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-ink-3">
-            <Braces className="size-3.5" /> Tap to add client details — filled in for each client
+            <Braces className="size-3.5" /> {groupMode ? "Tap to add — filled in for each group" : "Tap to add client details — filled in for each client"}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {vars.map((v) => (
+            {groupMode && (
+              <button type="button" onClick={() => insert("{{group_name}}")} className="rounded-full border border-brand/25 bg-brand-soft px-2.5 py-1 text-[12px] font-medium text-brand-text transition hover:border-brand/50">
+                + Group name
+              </button>
+            )}
+            {!groupMode && vars.map((v) => (
               <button
                 key={v.key}
                 type="button"
@@ -183,7 +191,7 @@ export function MessageComposer({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12px] text-ink-3">
-        <span>Use <b>{"{{name|Sir}}"}</b> to write "Sir" when a client has no name.</span>
+        <span>{groupMode ? <>Use <b>{"{{group_name}}"}</b> to name each group.</> : <>Use <b>{"{{name|Sir}}"}</b> to write "Sir" when a client has no name.</>}</span>
         <span className={clsx(message.length > 3500 && "text-warn")}>{message.length} / 4000</span>
       </div>
       {missing.length > 0 && (

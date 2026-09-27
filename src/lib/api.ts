@@ -141,7 +141,9 @@ export type Counts = { total: number; active: number; optedOut: number; invalid:
 export type Media = { id: string; name: string; kind: "image" | "video" | "document"; mimetype: string; size: number; url: string };
 
 export type Audience = {
-  mode: "all" | "tags" | "contacts";
+  mode: "all" | "tags" | "contacts" | "groups";
+  groupIds?: string[];
+  groupTags?: string[];
   tags: string[];
   tagMatch: "any" | "all";
   contactIds: string[];
@@ -189,6 +191,7 @@ export type Campaign = {
 };
 
 export type Recipient = {
+  isGroup?: boolean;
   phone: string;
   name: string;
   company: string;
@@ -313,3 +316,41 @@ export type Health = {
 };
 
 export type VerifyJob = { total: number; done: number; valid: number; invalid: number; skipped: number; running: boolean; startedAt: number; finishedAt: number | null; lastError: string | null };
+
+/* ── WhatsApp groups & Status ───────────────────────────────────────── */
+
+export type Group = {
+  id: string;
+  name: string;
+  description: string;
+  size: number;
+  announce: boolean;
+  isCommunity: boolean;
+  isCommunityAnnounce: boolean;
+  iAmAdmin: boolean;
+  canSend: boolean;
+  tags: string[];
+  note: string;
+  left: boolean;
+  lastPostAt: number | null;
+  syncedAt: number;
+  memberPhones: number;
+};
+
+export type GroupDetail = Omit<Group, "memberPhones"> & {
+  members: { phone: string | null; admin: string | null; clientName: string | null; isClient: boolean }[];
+};
+
+export type StatusPost = {
+  id: string;
+  kind: "text" | "image" | "video";
+  text: string;
+  caption: string;
+  mediaId: string | null;
+  media: Media | null;
+  backgroundColor: string;
+  audience: { mode: "all" | "tags"; tags: string[] };
+  viewers: number;
+  postedAt: number;
+  expiresAt: number;
+};

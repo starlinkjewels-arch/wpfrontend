@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical, Sparkles, ListChecks } from "lucide-react";
-import { api, post, put, type Audience, type Campaign, type Contact, type Media } from "../lib/api";
+import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical, Sparkles, ListChecks, UsersRound, Lock } from "lucide-react";
+import { api, post, put, type Audience, type Campaign, type Contact, type Group, type Media } from "../lib/api";
 import { useDebounced, useMeta, useSettings, useStatus } from "../lib/hooks";
 import { Button, Card, Checkbox, Label, Loading, Modal, Segmented, Avatar, Switch, useConfirm } from "../components/ui";
 import { AiSetupHint } from "../components/AiTools";
@@ -44,7 +44,7 @@ type AudiencePreview = {
 
 const DRAFT_KEY = "sl.campaign-draft";
 
-const emptyAudience: Audience = { mode: "all", tags: [], tagMatch: "any", contactIds: [], excludeTags: [] };
+const emptyAudience: Audience = { mode: "all", tags: [], tagMatch: "any", contactIds: [], excludeTags: [], groupIds: [], groupTags: [] };
 
 function toLocalInput(ms: number) {
   const d = new Date(ms);
@@ -125,7 +125,7 @@ export function CampaignEditorPage() {
       return;
     }
     loaded.current = true;
-    const handed = location.state as { contactIds?: string[]; tags?: string[] } | null;
+    const handed = location.state as { contactIds?: string[]; tags?: string[]; groups?: boolean; groupIds?: string[] } | null;
     const base: Form = {
       name: "",
       message: "",
@@ -138,7 +138,8 @@ export function CampaignEditorPage() {
       maxDelay: settings.maxDelay,
       aiPersonalize: false,
     };
-    if (handed?.contactIds?.length) setF({ ...base, audience: { ...emptyAudience, mode: "contacts", contactIds: handed.contactIds } });
+    if (handed?.groupIds?.length || handed?.groups) setF({ ...base, audience: { ...emptyAudience, mode: "groups", groupIds: handed.groupIds ?? [] } });
+    else if (handed?.contactIds?.length) setF({ ...base, audience: { ...emptyAudience, mode: "contacts", contactIds: handed.contactIds } });
     else if (handed?.tags?.length) setF({ ...base, audience: { ...emptyAudience, mode: "tags", tags: handed.tags } });
     else {
       const draft = local.get<Form | null>(DRAFT_KEY, null);
@@ -244,6 +245,7 @@ export function CampaignEditorPage() {
     if (!f.message.trim() && !f.media) p.push("Write a message");
     if (f.audience.mode === "tags" && !f.audience.tags.length) p.push("Choose at least one tag");
     if (f.audience.mode === "contacts" && !f.audience.contactIds.length) p.push("Pick at least one client");
+    if (f.audience.mode === "groups" && !(f.audience.groupIds?.length || f.audience.groupTags?.length)) p.push("Pick at least one group");
     if (aud.data && !aud.data.count) p.push("No clients to send to");
     if (f.when === "later" && (!sendAtMs || sendAtMs < Date.now() - 60000)) p.push("Pick a future time");
     return p;
@@ -272,16 +274,17 @@ export function CampaignEditorPage() {
   if (!f || (editing && existing.isLoading)) return <Loading />;
 
   const tagList = meta?.tags ?? [];
+  const groupMode = f.audience.mode === "groups";
 
   return (
     <div className="pb-28">
       <Link to="/campaigns" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-3 hover:text-ink">
-        <ArrowLeft className="size-4" /> Campaigns
+        <ArrowLeft className="size-4" /> Broadcasts
       </Link>
       <input
         value={f.name}
         onChange={(e) => set("name", e.target.value)}
-        placeholder="Untitled campaign"
+        placeholder="Untitled broadcast"
         aria-label="Campaign name"
         className="mb-6 w-full bg-transparent font-display text-[28px] font-medium tracking-tight text-ink outline-none placeholder:text-ink-3 sm:text-[32px]"
       />
@@ -299,10 +302,11 @@ export function CampaignEditorPage() {
         <div className="min-w-0 space-y-6">
           {/* 1. Audience */}
           <Section n={1} title="Who should get it?">
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
               <Choice active={f.audience.mode === "all"} onClick={() => setAud({ mode: "all" })} icon={<Users />} title="All clients" sub={meta ? `${num(meta.counts.active)} active` : ""} />
               <Choice active={f.audience.mode === "tags"} onClick={() => setAud({ mode: "tags" })} icon={<Tags />} title="By tag" sub="VIP, Dubai, Retailer…" />
               <Choice active={f.audience.mode === "contacts"} onClick={() => setAud({ mode: "contacts" })} icon={<UserCheck />} title="Pick clients" sub={f.audience.contactIds.length ? `${num(f.audience.contactIds.length)} picked` : "Choose by hand"} />
+              <Choice active={f.audience.mode === "groups"} onClick={() => setF({ ...f, audience: { ...f.audience, mode: "groups" }, aiPersonalize: false })} icon={<UsersRound />} title="WhatsApp groups" sub="Post into your groups" />
             </div>
 
             {f.audience.mode === "tags" && (
@@ -338,13 +342,21 @@ export function CampaignEditorPage() {
               </div>
             )}
 
+            {f.audience.mode === "groups" && (
+              <GroupPicker
+                ids={f.audience.groupIds ?? []}
+                tags={f.audience.groupTags ?? []}
+                onChange={(groupIds, groupTags) => setAud({ groupIds, groupTags })}
+              />
+            )}
+
             {f.audience.mode === "contacts" && (
               <Button className="mt-4" icon={<Search className="size-4" />} onClick={() => setPickOpen(true)}>
                 {f.audience.contactIds.length ? `Change selection (${num(f.audience.contactIds.length)})` : "Choose clients"}
               </Button>
             )}
 
-            {tagList.length > 0 && (
+            {tagList.length > 0 && f.audience.mode !== "groups" && (
               <div className="mt-4">
                 <button type="button" onClick={() => setMoreAudience((v) => !v)} className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-ink">
                   <ChevronDown className={clsx("size-4 transition-transform", moreAudience && "rotate-180")} /> Leave out some tags {f.audience.excludeTags.length > 0 && `(${f.audience.excludeTags.length})`}
@@ -366,7 +378,7 @@ export function CampaignEditorPage() {
 
             <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-surface-2 px-4 py-3 text-[13px]">
               <span className="flex items-center gap-2 font-semibold text-ink">
-                <Users className="size-4 text-brand" /> {aud.isFetching && !aud.data ? "…" : num(count)} client{count === 1 ? "" : "s"} will get this
+                <Users className="size-4 text-brand" /> {aud.isFetching && !aud.data ? "…" : num(count)} {groupMode ? `group${count === 1 ? "" : "s"}` : `client${count === 1 ? "" : "s"}`} will get this
               </span>
               {aud.data && aud.data.excluded.optedOut > 0 && <span className="text-ink-3">{num(aud.data.excluded.optedOut)} opted out — skipped</span>}
               {aud.data && aud.data.excluded.invalid > 0 && <span className="text-ink-3">{num(aud.data.excluded.invalid)} not on WhatsApp — skipped</span>}
@@ -379,9 +391,9 @@ export function CampaignEditorPage() {
 
           {/* 2. Message */}
           <Section n={2} title="Write your message">
-            <MessageComposer message={f.message} onMessage={(m) => set("message", m)} media={f.media} onMedia={(m) => set("media", m)} missing={aud.data?.missing} />
+            <MessageComposer message={f.message} onMessage={(m) => set("message", m)} media={f.media} onMedia={(m) => set("media", m)} missing={aud.data?.missing} groupMode={groupMode} />
 
-            <div className={clsx("mt-5 rounded-xl border p-4 transition-colors", f.aiPersonalize ? "border-gold/40 bg-gold-soft/50" : "border-line")}>
+            {!groupMode && <div className={clsx("mt-5 rounded-xl border p-4 transition-colors", f.aiPersonalize ? "border-gold/40 bg-gold-soft/50" : "border-line")}>
               <Switch
                 checked={f.aiPersonalize}
                 onChange={(v) => set("aiPersonalize", v)}
@@ -399,7 +411,7 @@ export function CampaignEditorPage() {
                   <AiSetupHint className="w-full" />
                 </div>
               )}
-            </div>
+            </div>}
           </Section>
 
           {/* 3. When */}
@@ -430,7 +442,7 @@ export function CampaignEditorPage() {
             )}
 
             <div className="mt-6">
-              <Label hint={`${num(count)} clients · ${duration(estimate)}`}>Sending speed</Label>
+              <Label hint={`${num(count)} ${groupMode ? "groups" : "clients"} · ${duration(estimate)}`}>Sending speed</Label>
               <div className="grid gap-2.5 sm:grid-cols-3">
                 {(Object.keys(SPEEDS) as (keyof typeof SPEEDS)[]).map((k) => {
                   const s = SPEEDS[k];
@@ -545,6 +557,73 @@ function Choice({ active, onClick, icon, title, sub }: { active: boolean; onClic
         {sub && <span className="mt-0.5 block text-[12px] leading-snug text-ink-3">{sub}</span>}
       </span>
     </button>
+  );
+}
+
+/**
+ * Which WhatsApp groups get this broadcast: tick groups, or pick a group tag
+ * ("Buyers") to include every group with it — now and any tagged later.
+ * Admins-only groups we cannot post in are shown, but cannot be picked.
+ */
+function GroupPicker({ ids, tags, onChange }: { ids: string[]; tags: string[]; onChange: (ids: string[], tags: string[]) => void }) {
+  const navigate = useNavigate();
+  const [q, setQ] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: ["groups", "", "", "active"],
+    queryFn: () => api<{ items: Group[]; tags: { tag: string; count: number }[]; connected: boolean }>("/groups?show=active"),
+  });
+  const items = (data?.items ?? []).filter((g) => !q || g.name.toLowerCase().includes(q.toLowerCase()));
+  const postable = items.filter((g) => g.canSend);
+  const has = (id: string) => ids.includes(id);
+  const tagOn = (t: string) => tags.some((x) => x.toLowerCase() === t.toLowerCase());
+
+  if (isLoading) return <p className="mt-4 text-sm text-ink-3">Loading your groups…</p>;
+  if (!data?.items.length) {
+    return (
+      <div className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-[13px] text-ink-2">
+        {data?.connected ? "No groups found for this number." : "Connect WhatsApp to load your groups."}{" "}
+        <button className="font-medium text-brand-text underline" onClick={() => navigate(data?.connected ? "/groups" : "/whatsapp")}>{data?.connected ? "Open Groups" : "Connect"}</button>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 space-y-3">
+      {(data.tags.length ?? 0) > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[12px] font-medium text-ink-3">Group tags:</span>
+          {data.tags.map((t) => (
+            <button key={t.tag} type="button" onClick={() => onChange(ids, tagOn(t.tag) ? tags.filter((x) => x.toLowerCase() !== t.tag.toLowerCase()) : [...tags, t.tag])}
+              className={clsx("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium", tagOn(t.tag) ? "border-brand bg-brand text-white" : "border-line text-ink-2 hover:border-line-strong")}>
+              {tagOn(t.tag) && <Check className="size-3.5" />}{t.tag} <span className={tagOn(t.tag) ? "text-white/75" : "text-ink-3"}>{t.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
+          <input className="field h-9 pl-9" placeholder="Search groups" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => onChange(ids.length >= postable.length ? [] : postable.map((g) => g.id), tags)}>
+          {ids.length >= postable.length && postable.length ? "Clear" : "Select all"}
+        </Button>
+      </div>
+      <ul className="scroll-thin max-h-72 divide-y divide-line overflow-y-auto rounded-xl border border-line">
+        {items.map((g) => (
+          <li key={g.id}>
+            <label className={clsx("flex items-center gap-3 px-3 py-2.5", g.canSend ? "cursor-pointer hover:bg-surface-2" : "opacity-55")}>
+              <Checkbox label={g.name} checked={has(g.id) || (g.canSend && g.tags.some(tagOn))} onChange={(v) => g.canSend && onChange(v ? [...ids, g.id] : ids.filter((x) => x !== g.id), tags)} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{g.name}</span>
+                <span className="block text-[12px] text-ink-3">{num(g.size)} members{g.tags.length ? ` · ${g.tags.join(", ")}` : ""}</span>
+              </span>
+              {!g.canSend && <span className="flex items-center gap-1 text-[11px] text-warn"><Lock className="size-3" />Admins only</span>}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[12px] text-ink-3">One message goes into each group. Use <b>{"{{group_name}}"}</b> in the text to name the group.</p>
+    </div>
   );
 }
 

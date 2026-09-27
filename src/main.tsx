@@ -18,6 +18,7 @@ import { CampaignDetailPage } from "./pages/CampaignDetail";
 import { CampaignReviewPage } from "./pages/CampaignReview";
 import { InboxPage } from "./pages/Inbox";
 import { TemplatesPage } from "./pages/Templates";
+import { GroupsPage } from "./pages/Groups";
 import { SettingsPage } from "./pages/Settings";
 
 const queryClient = new QueryClient({
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
       { path: "/campaigns/:id/review", element: <CampaignReviewPage /> },
       { path: "/inbox", element: <InboxPage /> },
       { path: "/inbox/:key", element: <InboxPage /> },
+      { path: "/groups", element: <GroupsPage /> },
       { path: "/templates", element: <TemplatesPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
