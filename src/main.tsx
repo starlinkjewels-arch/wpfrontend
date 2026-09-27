@@ -19,6 +19,8 @@ import { CampaignReviewPage } from "./pages/CampaignReview";
 import { InboxPage } from "./pages/Inbox";
 import { TemplatesPage } from "./pages/Templates";
 import { GroupsPage } from "./pages/Groups";
+import { BatchesPage } from "./pages/Batches";
+import { BatchDetailPage } from "./pages/BatchDetail";
 import { SettingsPage } from "./pages/Settings";
 
 const queryClient = new QueryClient({
@@ -65,6 +67,8 @@ const router = createBrowserRouter([
       { path: "/inbox", element: <InboxPage /> },
       { path: "/inbox/:key", element: <InboxPage /> },
       { path: "/groups", element: <GroupsPage /> },
+      { path: "/batches", element: <BatchesPage /> },
+      { path: "/batches/:id", element: <BatchDetailPage /> },
       { path: "/templates", element: <TemplatesPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },

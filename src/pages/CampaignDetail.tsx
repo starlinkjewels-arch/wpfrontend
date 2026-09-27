@@ -278,7 +278,15 @@ export function CampaignDetailPage() {
           <PhonePreview text={rendered.data?.text ?? c.message} media={c.media} contactName={rendered.data?.contact.name} />
           <Card className="space-y-2.5 p-4 text-[13px]">
             <Row icon={<Users />} label="Audience">
-              {c.audience.mode === "all" ? "All clients" : c.audience.mode === "tags" ? `Tags: ${c.audience.tags.join(", ")}` : c.audience.mode === "groups" ? `WhatsApp groups${c.audience.groupTags?.length ? ` · tags: ${c.audience.groupTags.join(", ")}` : ""}${c.audience.groupIds?.length ? ` · ${num(c.audience.groupIds.length)} picked` : ""}` : `${num(c.audience.contactIds.length)} picked clients`}
+              {c.audience.mode === "batch" ? (
+                <span className="flex flex-wrap gap-1">
+                  {(c.audience.batchIds ?? []).map((bid, i) => (
+                    <Link key={bid} to={`/batches/${bid}`} className="rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-medium text-brand-text hover:underline">
+                      {c.audience.batchNames?.[i] ?? "Batch"}
+                    </Link>
+                  ))}
+                </span>
+              ) : c.audience.mode === "all" ? "All clients" : c.audience.mode === "tags" ? `Tags: ${c.audience.tags.join(", ")}` : c.audience.mode === "groups" ? `WhatsApp groups${c.audience.groupTags?.length ? ` · tags: ${c.audience.groupTags.join(", ")}` : ""}${c.audience.groupIds?.length ? ` · ${num(c.audience.groupIds.length)} picked` : ""}` : `${num(c.audience.contactIds.length)} picked clients`}
             </Row>
             {c.audience.excludeTags.length > 0 && <Row icon={<Ban />} label="Left out">{c.audience.excludeTags.join(", ")}</Row>}
             <Row icon={<Clock3 />} label="Gap">{c.minDelay}–{c.maxDelay} seconds</Row>

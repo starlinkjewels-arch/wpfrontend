@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical, Sparkles, ListChecks, UsersRound, Lock } from "lucide-react";
+import { ArrowLeft, CalendarClock, Check, ChevronDown, Gauge, Rabbit, Send, Shield, Shuffle, Smartphone, Tags, Turtle, Users, UserCheck, Zap, Search, Info, FlaskConical, Sparkles, ListChecks, UsersRound, Lock, Layers } from "lucide-react";
 import { api, post, put, type Audience, type Campaign, type Contact, type Group, type Media } from "../lib/api";
 import { useDebounced, useMeta, useSettings, useStatus } from "../lib/hooks";
 import { Button, Card, Checkbox, Label, Loading, Modal, Segmented, Avatar, Switch, useConfirm } from "../components/ui";
 import { AiSetupHint } from "../components/AiTools";
+import { batchColor } from "../lib/batchColors";
 import { MessageComposer } from "../components/MessageComposer";
 import { PhonePreview } from "../components/PhonePreview";
 import { duration, friendlyWhen, num, phone } from "../lib/format";
@@ -44,7 +45,7 @@ type AudiencePreview = {
 
 const DRAFT_KEY = "sl.campaign-draft";
 
-const emptyAudience: Audience = { mode: "all", tags: [], tagMatch: "any", contactIds: [], excludeTags: [], groupIds: [], groupTags: [] };
+const emptyAudience: Audience = { mode: "all", tags: [], tagMatch: "any", contactIds: [], excludeTags: [], groupIds: [], groupTags: [], batchIds: [] };
 
 function toLocalInput(ms: number) {
   const d = new Date(ms);
@@ -125,7 +126,7 @@ export function CampaignEditorPage() {
       return;
     }
     loaded.current = true;
-    const handed = location.state as { contactIds?: string[]; tags?: string[]; groups?: boolean; groupIds?: string[] } | null;
+    const handed = location.state as { contactIds?: string[]; tags?: string[]; groups?: boolean; groupIds?: string[]; batchIds?: string[] } | null;
     const base: Form = {
       name: "",
       message: "",
@@ -138,7 +139,8 @@ export function CampaignEditorPage() {
       maxDelay: settings.maxDelay,
       aiPersonalize: false,
     };
-    if (handed?.groupIds?.length || handed?.groups) setF({ ...base, audience: { ...emptyAudience, mode: "groups", groupIds: handed.groupIds ?? [] } });
+    if (handed?.batchIds?.length) setF({ ...base, audience: { ...emptyAudience, mode: "batch", batchIds: handed.batchIds } });
+    else if (handed?.groupIds?.length || handed?.groups) setF({ ...base, audience: { ...emptyAudience, mode: "groups", groupIds: handed.groupIds ?? [] } });
     else if (handed?.contactIds?.length) setF({ ...base, audience: { ...emptyAudience, mode: "contacts", contactIds: handed.contactIds } });
     else if (handed?.tags?.length) setF({ ...base, audience: { ...emptyAudience, mode: "tags", tags: handed.tags } });
     else {
@@ -246,6 +248,7 @@ export function CampaignEditorPage() {
     if (f.audience.mode === "tags" && !f.audience.tags.length) p.push("Choose at least one tag");
     if (f.audience.mode === "contacts" && !f.audience.contactIds.length) p.push("Pick at least one client");
     if (f.audience.mode === "groups" && !(f.audience.groupIds?.length || f.audience.groupTags?.length)) p.push("Pick at least one group");
+    if (f.audience.mode === "batch" && !f.audience.batchIds?.length) p.push("Pick at least one batch");
     if (aud.data && !aud.data.count) p.push("No clients to send to");
     if (f.when === "later" && (!sendAtMs || sendAtMs < Date.now() - 60000)) p.push("Pick a future time");
     return p;
@@ -302,9 +305,10 @@ export function CampaignEditorPage() {
         <div className="min-w-0 space-y-6">
           {/* 1. Audience */}
           <Section n={1} title="Who should get it?">
-            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               <Choice active={f.audience.mode === "all"} onClick={() => setAud({ mode: "all" })} icon={<Users />} title="All clients" sub={meta ? `${num(meta.counts.active)} active` : ""} />
               <Choice active={f.audience.mode === "tags"} onClick={() => setAud({ mode: "tags" })} icon={<Tags />} title="By tag" sub="VIP, Dubai, Retailer…" />
+              <Choice active={f.audience.mode === "batch"} onClick={() => setAud({ mode: "batch" })} icon={<Layers />} title="Batch" sub={f.audience.batchIds?.length ? `${num(f.audience.batchIds.length)} picked` : "Your saved lists"} />
               <Choice active={f.audience.mode === "contacts"} onClick={() => setAud({ mode: "contacts" })} icon={<UserCheck />} title="Pick clients" sub={f.audience.contactIds.length ? `${num(f.audience.contactIds.length)} picked` : "Choose by hand"} />
               <Choice active={f.audience.mode === "groups"} onClick={() => setF({ ...f, audience: { ...f.audience, mode: "groups" }, aiPersonalize: false })} icon={<UsersRound />} title="WhatsApp groups" sub="Post into your groups" />
             </div>
@@ -340,6 +344,10 @@ export function CampaignEditorPage() {
                   </>
                 )}
               </div>
+            )}
+
+            {f.audience.mode === "batch" && (
+              <BatchPicker ids={f.audience.batchIds ?? []} onChange={(batchIds) => setAud({ batchIds })} />
             )}
 
             {f.audience.mode === "groups" && (
@@ -565,6 +573,39 @@ function Choice({ active, onClick, icon, title, sub }: { active: boolean; onClic
  * ("Buyers") to include every group with it — now and any tagged later.
  * Admins-only groups we cannot post in are shown, but cannot be picked.
  */
+/** Which saved batches get this broadcast. A client in two picked batches gets it once. */
+function BatchPicker({ ids, onChange }: { ids: string[]; onChange: (ids: string[]) => void }) {
+  const navigate = useNavigate();
+  const { data: meta } = useMeta();
+  const list = meta?.batches ?? [];
+  if (!list.length) {
+    return (
+      <div className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-[13px] text-ink-2">
+        No batches yet. Select clients on the Clients page and choose <b>Add to batch</b>.{" "}
+        <button className="font-medium text-brand-text underline" onClick={() => navigate("/clients")}>Go to Clients</button>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      {list.map((b) => {
+        const on = ids.includes(b.id);
+        const col = batchColor(b.color);
+        return (
+          <button key={b.id} type="button" onClick={() => onChange(on ? ids.filter((x) => x !== b.id) : [...ids, b.id])}
+            className={clsx("flex items-center gap-3 rounded-xl border p-3 text-left transition", on ? "border-brand bg-brand-soft/60 ring-1 ring-brand" : "border-line hover:border-line-strong")}>
+            <span className={clsx("flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white", col.tile)}>{on ? <Check className="size-4" /> : <Layers className="size-4" />}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{b.name}</span>
+              <span className="block text-[12px] text-ink-3">{num(b.members)} clients</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function GroupPicker({ ids, tags, onChange }: { ids: string[]; tags: string[]; onChange: (ids: string[], tags: string[]) => void }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");

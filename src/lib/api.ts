@@ -141,7 +141,9 @@ export type Counts = { total: number; active: number; optedOut: number; invalid:
 export type Media = { id: string; name: string; kind: "image" | "video" | "document"; mimetype: string; size: number; url: string };
 
 export type Audience = {
-  mode: "all" | "tags" | "contacts" | "groups";
+  mode: "all" | "tags" | "contacts" | "groups" | "batch";
+  batchIds?: string[];
+  batchNames?: string[];
   groupIds?: string[];
   groupTags?: string[];
   tags: string[];
@@ -295,6 +297,7 @@ export type AiDrafts = {
 };
 
 export type ContactsMeta = {
+  batches?: { id: string; name: string; color: BatchColor; members: number }[];
   tags: { tag: string; count: number }[];
   fields: { key: string; count: number }[];
   builtIn: { key: string; label: string }[];
@@ -354,3 +357,53 @@ export type StatusPost = {
   postedAt: number;
   expiresAt: number;
 };
+
+/* ── Client batches ─────────────────────────────────────────────────── */
+
+export type BatchColor = "violet" | "blue" | "pink" | "amber" | "emerald" | "cyan" | "rose" | "slate";
+
+export type BatchTotals = { broadcasts: number; sent: number; delivered: number; read: number; replied: number; failed: number; optedOut: number };
+
+export type Batch = {
+  id: string;
+  name: string;
+  description: string;
+  color: BatchColor;
+  members: number;
+  createdAt: number;
+  updatedAt: number;
+  lastSentAt: number | null;
+  lastBroadcastName: string | null;
+  scheduled: number;
+  totals: BatchTotals;
+};
+
+export type BatchMember = {
+  id: string;
+  phone: string;
+  name: string;
+  company: string;
+  country: string;
+  tags: string[];
+  optedOut: boolean;
+  waStatus: string;
+  lastInboundAt: number | null;
+  lastCampaignAt: number | null;
+};
+
+export type BatchHistoryItem = {
+  id: string;
+  name: string;
+  status: CampaignStatus;
+  message: string;
+  mediaId: string | null;
+  aiPersonalize: boolean;
+  batchCount: number;
+  createdAt: number;
+  scheduledAt: number | null;
+  startedAt: number | null;
+  finishedAt: number | null;
+  stats: Stats | null;
+};
+
+export type BatchDetail = Omit<Batch, "members"> & { members: BatchMember[]; removedMembers: number; history: BatchHistoryItem[] };

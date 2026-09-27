@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MessageCircle, Plus, Trash2, X } from "lucide-react";
-import { del, post, put, type Contact } from "../lib/api";
+import { api, del, post, put, type Contact } from "../lib/api";
+import { batchColor } from "../lib/batchColors";
 import { useMeta } from "../lib/hooks";
 import { Badge, Button, Drawer, Label, Switch, useConfirm } from "./ui";
 import { TagInput } from "./TagInput";
@@ -29,6 +30,11 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
   const qc = useQueryClient();
   const confirm = useConfirm();
   const { data: meta } = useMeta();
+  const { data: clientBatches } = useQuery({
+    queryKey: ["client-batches", contact?.id],
+    queryFn: () => api<{ items: { id: string; name: string; color: string }[] }>(`/contacts/${contact!.id}/batches`),
+    enabled: open && Boolean(contact),
+  });
   const [f, setF] = useState<Form>(empty);
 
   useEffect(() => {
@@ -140,6 +146,17 @@ export function ClientDrawer({ open, contact, onClose }: { open: boolean; contac
           <Link to={`/inbox/${contact.id}`} className="ml-auto inline-flex items-center gap-1 font-medium text-brand-text hover:underline">
             <MessageCircle className="size-3.5" /> Chat
           </Link>
+        </div>
+      )}
+      {contact && (clientBatches?.items.length ?? 0) > 0 && (
+        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-ink-3">In batches:</span>
+          {clientBatches!.items.map((b) => (
+            <Link key={b.id} to={`/batches/${b.id}`} onClick={onClose} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium hover:underline ${batchColor(b.color).soft}`}>
+              <span className={`size-1.5 rounded-full ${batchColor(b.color).dot}`} />
+              {b.name}
+            </Link>
+          ))}
         </div>
       )}
       <div className="space-y-4">

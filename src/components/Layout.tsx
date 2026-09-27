@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import clsx from "clsx";
-import { Home, Megaphone, Users, UsersRound, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
+import { Home, Megaphone, Users, UsersRound, Layers, MessagesSquare, FileText, Settings, Plus, Moon, Sun, LogOut, Smartphone, WifiOff, FlaskConical, MoreHorizontal } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStatus } from "../lib/hooks";
 import { auth } from "../lib/api";
@@ -13,6 +13,7 @@ const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
   { to: "/campaigns", label: "Broadcasts", icon: Megaphone },
   { to: "/clients", label: "Clients", icon: Users },
+  { to: "/batches", label: "Batches", icon: Layers },
   { to: "/groups", label: "Groups", icon: UsersRound },
   { to: "/inbox", label: "Inbox", icon: MessagesSquare, badge: "unread" as const },
   { to: "/templates", label: "Templates", icon: FileText },
@@ -151,6 +152,7 @@ export function Layout() {
           >
             {(close) => (
               <>
+                <MenuItem icon={<Layers />} onClick={() => { close(); navigate("/batches"); }}>Client batches</MenuItem>
                 <MenuItem icon={<UsersRound />} onClick={() => { close(); navigate("/groups"); }}>WhatsApp groups</MenuItem>
                 <MenuItem icon={<FileText />} onClick={() => { close(); navigate("/templates"); }}>Templates</MenuItem>
                 <MenuItem icon={<Settings />} onClick={() => { close(); navigate("/settings"); }}>Settings</MenuItem>
@@ -186,7 +188,7 @@ export function Layout() {
 
       {/* ── Tab bar (mobile) ── */}
       <nav className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line px-1 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 lg:hidden">
-        {[NAV[0], NAV[1], { to: "/campaigns/new", label: "New", icon: Plus, fab: true }, NAV[2], NAV[4]].map((item) => {
+        {[NAV[0], NAV[1], { to: "/campaigns/new", label: "New", icon: Plus, fab: true }, NAV[2], NAV[5]].map((item) => {
           const Icon = item.icon;
           if ("fab" in item) {
             return (

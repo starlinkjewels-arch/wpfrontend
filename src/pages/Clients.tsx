@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, Megaphone, MoreHorizontal, Plus, Search, Tag as TagIcon, Trash2, UserPlus, Users, X, BellOff, Bell, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, CheckCheck, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet, Megaphone, MoreHorizontal, Plus, Search, Tag as TagIcon, Trash2, UserPlus, Users, X, BellOff, Bell, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, CheckCheck, Loader2, Layers } from "lucide-react";
 import { api, post, type Contact, type Counts, type VerifyJob } from "../lib/api";
 import { useDebounced, useMeta } from "../lib/hooks";
 import { Avatar, Badge, Button, Card, Checkbox, Empty, Loading, Menu, MenuItem, Modal, PageHeader, Progress, Segmented, Tag, useConfirm, Label } from "../components/ui";
 import { ClientDrawer } from "../components/ClientDrawer";
+import { AddToBatchModal } from "../components/BatchModals";
 import { TagInput } from "../components/TagInput";
 import { ago, countryName, flag, num, pct, phone } from "../lib/format";
 import { exportContacts } from "../lib/excel";
@@ -28,6 +29,8 @@ export function ClientsPage() {
   const [status, setStatus] = useState<StatusFilter>(local.get("sl.clients.status", "all"));
   const [tags, setTags] = useState<string[]>(params.get("tag")?.split(",").filter(Boolean) ?? []);
   const source = params.get("source") ?? "";
+  const batch = params.get("batch") ?? "";
+  const [batchModal, setBatchModal] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [allMatching, setAllMatching] = useState(false);
@@ -41,8 +44,9 @@ export function ClientsPage() {
     if (tags.length) s.set("tag", tags.join(","));
     if (status !== "all") s.set("status", status);
     if (source) s.set("source", source);
+    if (batch) s.set("batch", batch);
     return s.toString();
-  }, [dq, tags, status, source]);
+  }, [dq, tags, status, source, batch]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["contacts", filterQs, page],
@@ -145,7 +149,15 @@ export function ClientsPage() {
 
   const counts = data?.counts ?? meta?.counts;
   const noClientsAtAll = counts?.total === 0;
-  const filtering = Boolean(dq || tags.length || status !== "all" || source);
+  const filtering = Boolean(dq || tags.length || status !== "all" || source || batch);
+  const batchList = meta?.batches ?? [];
+  const activeBatch = batchList.find((b) => b.id === batch);
+  const setBatch = (id: string) => {
+    const next = new URLSearchParams(params);
+    if (id) next.set("batch", id);
+    else next.delete("batch");
+    setParams(next);
+  };
 
   return (
     <>
@@ -204,6 +216,19 @@ export function ClientsPage() {
           </div>
 
           <VerifyBanner />
+
+          {batchList.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Layers className="size-4 text-ink-3" />
+              <select className="field h-9 w-auto min-w-48 !py-0 text-[13px]" value={batch} onChange={(e) => setBatch(e.target.value)} aria-label="Filter by batch">
+                <option value="">All batches</option>
+                {batchList.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.members})</option>)}
+              </select>
+              {activeBatch && (
+                <Link to={`/batches/${activeBatch.id}`} className="text-[13px] font-medium text-brand-text hover:underline">Open batch history →</Link>
+              )}
+            </div>
+          )}
 
           {(meta?.tags.length ?? 0) > 0 && (
             <div className="scroll-thin -mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
@@ -350,7 +375,10 @@ export function ClientsPage() {
           <Button size="sm" variant="primary" icon={<Megaphone className="size-4" />} onClick={campaignToSelected}>
             <span className="hidden sm:inline">Send campaign</span><span className="sm:hidden">Send</span>
           </Button>
-          <Button size="sm" icon={<TagIcon className="size-4" />} onClick={() => setTagModal("addTags")} className="max-sm:!hidden">Add tag</Button>
+          <Button size="sm" icon={<Layers className="size-4" />} onClick={() => setBatchModal(true)}>
+            <span className="max-sm:hidden">Add to batch</span><span className="sm:hidden">Batch</span>
+          </Button>
+          <Button size="sm" icon={<TagIcon className="size-4" />} onClick={() => setTagModal("addTags")} className="max-md:!hidden">Add tag</Button>
           <Button
             size="sm"
             variant="ghost"
@@ -380,6 +408,13 @@ export function ClientsPage() {
         </div>
       )}
 
+      <AddToBatchModal
+        open={batchModal}
+        onClose={() => setBatchModal(false)}
+        selection={selectionBody()}
+        count={selCount}
+        onDone={() => { setSelected(new Set()); setAllMatching(false); }}
+      />
       <TagModal
         mode={tagModal}
         count={selCount}
