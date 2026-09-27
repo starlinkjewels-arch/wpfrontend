@@ -286,7 +286,7 @@ export function CampaignEditorPage() {
         onChange={(e) => set("name", e.target.value)}
         placeholder="Untitled broadcast"
         aria-label="Campaign name"
-        className="mb-6 w-full bg-transparent font-display text-[28px] font-medium tracking-tight text-ink outline-none placeholder:text-ink-3 sm:text-[32px]"
+        className="mb-6 w-full bg-transparent font-display text-[28px] font-extrabold tracking-tight text-ink outline-none placeholder:text-ink-3 sm:text-[32px]"
       />
 
       {existing.data?.followUpOf && (
@@ -298,7 +298,7 @@ export function CampaignEditorPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
         <div className="min-w-0 space-y-6">
           {/* 1. Audience */}
           <Section n={1} title="Who should get it?">
@@ -473,7 +473,7 @@ export function CampaignEditorPage() {
         </div>
 
         {/* Preview column */}
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+        <aside className="xl:sticky xl:top-6 xl:self-start">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-[15px] font-semibold"><Smartphone className="size-4 text-ink-3" /> Preview</h3>
             <div className="flex items-center gap-1">

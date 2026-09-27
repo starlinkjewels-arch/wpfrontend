@@ -52,9 +52,9 @@ export function HomePage() {
       <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-ink-3">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1 className="mt-1 font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[36px]">
-            {greeting()}
-            <span className="text-gold">.</span>
+          <h1 className="mt-1 font-display text-[30px] font-extrabold leading-tight tracking-tight sm:text-[36px]">
+            <span className="text-brand-gradient">{greeting()}</span>
+            <span className="text-pink-500">.</span>
           </h1>
         </div>
         <div className="flex gap-2">
@@ -85,8 +85,8 @@ export function HomePage() {
       )}
 
       {/* KPI tiles */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <Kpi label="Clients" value={num(data.counts.total)} sub={`${num(data.counts.active)} can receive messages`} icon={<Users />} to="/clients" />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
+        <Kpi label="Clients" value={num(data.counts.total)} sub={`${num(data.counts.active)} can receive messages`} icon={<Users />} to="/clients" tone="violet" />
         <Kpi
           label="Sent today"
           value={num(data.today.sent)}
@@ -97,12 +97,13 @@ export function HomePage() {
             </span>
           }
           icon={<Send />}
+          tone="blue"
         />
-        <Kpi label="Replies today" value={num(data.today.inbound)} sub={data.unread ? `${data.unread} chats unread` : "All caught up"} icon={<MessageCircle />} to="/inbox" highlight={data.unread > 0} />
-        <Kpi label="Scheduled" value={num(data.upcoming.length)} sub={data.upcoming[0] ? `Next: ${data.upcoming[0].name}` : "Nothing scheduled"} icon={<CalendarClock />} to="/campaigns" />
+        <Kpi label="Replies today" value={num(data.today.inbound)} sub={data.unread ? `${data.unread} chats unread` : "All caught up"} icon={<MessageCircle />} to="/inbox" highlight={data.unread > 0} tone="pink" />
+        <Kpi label="Scheduled" value={num(data.upcoming.length)} sub={data.upcoming[0] ? `Next: ${data.upcoming[0].name}` : "Nothing scheduled"} icon={<CalendarClock />} to="/campaigns" tone="amber" />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="min-w-0 space-y-6">
           {live.length > 0 && (
             <section>
@@ -198,8 +199,8 @@ function HealthCard({ health }: { health: Health }) {
   const t = health.totals;
   return (
     <Card className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 basis-40">
           <h3 className="text-[15px] font-semibold">Account health</h3>
           <p className="mt-0.5 text-[13px] text-ink-3">{v.line}</p>
         </div>
@@ -269,15 +270,25 @@ function SectionTitle({ title, to }: { title: string; to: string }) {
   );
 }
 
-function Kpi({ label, value, sub, icon, to, highlight }: { label: string; value: string; sub: React.ReactNode; icon: React.ReactNode; to?: string; highlight?: boolean }) {
+/* Each tile has its own colour, so the four numbers read apart at a glance. */
+const KPI_TONES = {
+  violet: { tile: "from-violet-500 to-indigo-500", glow: "rgba(124,92,255,.35)" },
+  blue: { tile: "from-sky-500 to-blue-600", glow: "rgba(59,130,246,.35)" },
+  pink: { tile: "from-pink-500 to-rose-500", glow: "rgba(236,72,153,.35)" },
+  amber: { tile: "from-amber-400 to-orange-500", glow: "rgba(245,158,11,.35)" },
+};
+
+function Kpi({ label, value, sub, icon, to, highlight, tone = "violet" }: { label: string; value: string; sub: React.ReactNode; icon: React.ReactNode; to?: string; highlight?: boolean; tone?: keyof typeof KPI_TONES }) {
+  const t = KPI_TONES[tone];
   const body = (
-    <Card className={clsx("h-full p-4 transition-colors sm:p-5", to && "hover:border-line-strong", highlight && "ring-2 ring-brand/30")}>
-      <div className="flex items-center justify-between">
-        <span className="text-[13px] font-medium text-ink-2">{label}</span>
-        <span className="text-ink-3 [&>svg]:size-4">{icon}</span>
+    <Card className={clsx("group relative h-full overflow-hidden p-4 transition-all sm:p-5", to && "hover:-translate-y-0.5 hover:shadow-pop", highlight && "ring-2 ring-pink-400/40")}>
+      <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full opacity-60 blur-2xl" style={{ background: t.glow }} />
+      <div className="relative flex items-center justify-between">
+        <span className="text-[13px] font-semibold text-ink-2">{label}</span>
+        <span className={clsx("flex size-9 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg [&>svg]:size-[18px]", t.tile)}>{icon}</span>
       </div>
-      <div className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-ink sm:text-[32px]">{value}</div>
-      <div className="mt-2 truncate text-[12px] text-ink-3">{sub}</div>
+      <div className="relative mt-3 font-display text-[30px] font-extrabold leading-none tracking-tight text-ink sm:text-[34px]">{value}</div>
+      <div className="relative mt-2 truncate text-[12px] text-ink-3">{sub}</div>
     </Card>
   );
   return to ? <Link to={to}>{body}</Link> : body;

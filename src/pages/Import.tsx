@@ -181,7 +181,7 @@ export function ImportPage() {
           <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-brand-soft text-brand-text">
             <CheckCircle2 className="size-8" />
           </div>
-          <h2 className="mt-5 font-display text-2xl font-medium">Import complete</h2>
+          <h2 className="mt-5 font-display text-2xl font-extrabold">Import complete</h2>
           <p className="mt-2 text-sm text-ink-2">
             {num(result.summary.new)} new client{result.summary.new === 1 ? "" : "s"} added
             {result.summary.update > 0 && `, ${num(result.summary.update)} updated`}

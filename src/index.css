@@ -1,77 +1,97 @@
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/plus-jakarta-sans";
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ── Tokens ────────────────────────────────────────────────────────────
-   Calm, warm neutrals with one jewel-tone accent. Every colour in the app
-   comes from here, and dark mode is its own chosen set, not an inversion. */
+   A bright, modern palette: violet into blue for everything that acts,
+   fuchsia for the AI, vivid status colours, and cool neutrals behind them.
+   Dark mode is its own chosen set — deep navy with a violet glow. */
 :root {
-  --bg: #f6f5f1;
+  --bg: #f4f5fb;
   --surface: #ffffff;
-  --surface-2: #f2f1ec;
-  --surface-3: #e9e7e1;
-  --line: #e5e2da;
-  --line-strong: #d4d0c6;
-  --ink: #1b1a17;
-  --ink-2: #55524b;
-  --ink-3: #85817a;
-  --brand: #0b7a5c;
-  --brand-hover: #096a50;
-  --brand-soft: #e4f2ec;
-  --brand-text: #07684e;
-  --gold: #a47623;
-  --gold-soft: #f6eedd;
-  --danger: #bf3328;
-  --danger-soft: #fbe9e6;
-  --warn: #9a5b00;
-  --warn-soft: #fcf0da;
-  --info: #235fb3;
-  --info-soft: #e7effb;
-  --chart: #0f9f74;
+  --surface-2: #f2f3fa;
+  --surface-3: #e5e7f3;
+  --line: #e3e5f0;
+  --line-strong: #cfd3e6;
+  --ink: #0f1222;
+  --ink-2: #474c68;
+  --ink-3: #7f84a0;
+  --brand: #6d4aff;
+  --brand-2: #3b82f6;
+  --brand-hover: #5b37f5;
+  --brand-soft: #eeeaff;
+  --brand-text: #5a36f0;
+  --gold: #c026d3;
+  --gold-soft: #fbe9fd;
+  --danger: #e11d48;
+  --danger-soft: #ffe8ee;
+  --warn: #c2410c;
+  --warn-soft: #fff0e5;
+  --info: #0369a1;
+  --info-soft: #e2f3fd;
+  --ok: #059669;
+  --ok-soft: #e1f7ee;
+  --chart: #6d4aff;
   --chat-bg: #efeae2;
   --bubble-out: #d9fdd3;
   --bubble-in: #ffffff;
-  --shadow: 0 1px 2px rgb(27 26 23 / 0.04), 0 2px 8px rgb(27 26 23 / 0.04);
-  --shadow-lg: 0 12px 40px rgb(27 26 23 / 0.14), 0 2px 8px rgb(27 26 23 / 0.06);
+  --sidebar-from: #1d1452;
+  --sidebar-to: #0e1233;
+  --glow-a: rgb(124 92 255 / 0.16);
+  --glow-b: rgb(59 130 246 / 0.12);
+  --glow-c: rgb(236 72 153 / 0.08);
+  --shadow: 0 1px 2px rgb(15 18 34 / 0.04), 0 8px 24px -10px rgb(76 64 160 / 0.14);
+  --shadow-lg: 0 24px 60px -12px rgb(40 30 110 / 0.28), 0 4px 12px rgb(15 18 34 / 0.06);
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --bg: #0d0e0e;
-  --surface: #161717;
-  --surface-2: #1d1f1f;
-  --surface-3: #262828;
-  --line: #2a2d2c;
-  --line-strong: #3a3d3c;
-  --ink: #f3f2ee;
-  --ink-2: #b8b5ad;
-  --ink-3: #85827b;
-  --brand: #178a66;
-  --brand-hover: #1c9a73;
-  --brand-soft: #122a21;
-  --brand-text: #5fd3a6;
-  --gold: #d6aa55;
-  --gold-soft: #2a2415;
-  --danger: #f0695f;
-  --danger-soft: #2e1714;
-  --warn: #f0a53a;
-  --warn-soft: #2b2012;
-  --info: #72a6ef;
-  --info-soft: #15213a;
-  --chart: #22a878;
+  --bg: #090a16;
+  --surface: #11132a;
+  --surface-2: #181b36;
+  --surface-3: #22264a;
+  --line: #242848;
+  --line-strong: #343a63;
+  --ink: #f1f2ff;
+  --ink-2: #b1b5d8;
+  --ink-3: #7b80a6;
+  --brand: #7c5cff;
+  --brand-2: #4f8ff7;
+  --brand-hover: #8f74ff;
+  --brand-soft: #211a4f;
+  --brand-text: #b4a3ff;
+  --gold: #e879f9;
+  --gold-soft: #3a1541;
+  --danger: #fb7185;
+  --danger-soft: #3b1422;
+  --warn: #fb923c;
+  --warn-soft: #3a2213;
+  --info: #38bdf8;
+  --info-soft: #0e2a40;
+  --ok: #34d399;
+  --ok-soft: #0f2e25;
+  --chart: #8b7bff;
   --chat-bg: #0b141a;
   --bubble-out: #005c4b;
   --bubble-in: #202c33;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-lg: 0 16px 48px rgb(0 0 0 / 0.5);
+  --sidebar-from: #120d33;
+  --sidebar-to: #080a1c;
+  --glow-a: rgb(124 92 255 / 0.22);
+  --glow-b: rgb(59 130 246 / 0.14);
+  --glow-c: rgb(236 72 153 / 0.08);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -10px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 24px 60px -12px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-2: var(--brand-2);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -101,7 +121,12 @@
 @layer base {
   html,
   body {
-    background: var(--bg);
+    background:
+      radial-gradient(1100px 520px at 12% -8%, var(--glow-a), transparent 70%),
+      radial-gradient(900px 480px at 95% 0%, var(--glow-b), transparent 70%),
+      radial-gradient(700px 500px at 60% 100%, var(--glow-c), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
@@ -138,6 +163,27 @@
 }
 
 @layer components {
+  /* The one gradient everything that acts uses. */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+  }
+  .text-brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 60%, #ec4899 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .glow-brand {
+    box-shadow: 0 10px 24px -8px color-mix(in oklab, var(--brand) 60%, transparent);
+  }
+  .glass {
+    background: color-mix(in oklab, var(--surface) 82%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  .font-display {
+    letter-spacing: -0.025em;
+  }
   .field {
     width: 100%;
     border-radius: 10px;

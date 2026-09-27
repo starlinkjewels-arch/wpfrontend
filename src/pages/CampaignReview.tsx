@@ -73,7 +73,7 @@ export function CampaignReviewPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-[28px] font-medium leading-tight tracking-tight sm:text-[32px]">Each client's message</h1>
+            <h1 className="font-display text-[28px] font-extrabold leading-tight tracking-tight sm:text-[32px]">Each client's message</h1>
             <StatusBadge status={c.status} />
           </div>
           <p className="mt-1 max-w-2xl text-sm text-ink-2">

@@ -46,7 +46,7 @@ export function InboxPage() {
       <section className={clsx("flex w-full shrink-0 flex-col border-r border-line bg-surface lg:w-[360px]", key && "hidden lg:flex")}>
         <div className="border-b border-line px-4 pb-3 pt-5">
           <div className="mb-3 flex items-center justify-between">
-            <h1 className="font-display text-2xl font-medium tracking-tight">Inbox</h1>
+            <h1 className="font-display text-2xl font-extrabold tracking-tight">Inbox</h1>
             {status?.demo && (
               <Button size="sm" variant="ghost" icon={<FlaskConical className="size-4" />} onClick={() => simulate.mutate()} loading={simulate.isPending}>
                 Simulate enquiry

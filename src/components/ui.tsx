@@ -19,12 +19,12 @@ export function Button({ variant = "secondary", size = "md", loading, icon, clas
       {...rest}
       disabled={disabled || loading}
       className={clsx(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium transition-all duration-150 select-none",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition-all duration-150 select-none",
         "disabled:opacity-55 active:scale-[0.98]",
         size === "sm" && "h-8 px-3 text-[13px]",
         size === "md" && "h-10 px-4 text-sm",
         size === "lg" && "h-12 px-6 text-[15px]",
-        variant === "primary" && "bg-brand text-white shadow-card hover:bg-brand-hover",
+        variant === "primary" && "bg-brand-gradient glow-brand text-white hover:brightness-110 hover:-translate-y-px",
         variant === "secondary" && "border border-line bg-surface text-ink shadow-card hover:border-line-strong hover:bg-surface-2",
         variant === "ghost" && "text-ink-2 hover:bg-surface-2 hover:text-ink",
         variant === "soft" && "bg-brand-soft text-brand-text hover:brightness-95 dark:hover:brightness-125",
@@ -55,7 +55,7 @@ export function IconButton({ label, className, children, ...rest }: ButtonHTMLAt
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div {...rest} className={clsx("rounded-2xl border border-line bg-surface shadow-card", className)}>
+    <div {...rest} className={clsx("glass rounded-2xl border border-line/80 shadow-card", className)}>
       {children}
     </div>
   );
@@ -77,7 +77,7 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="font-display text-[28px] font-medium leading-tight tracking-tight text-ink sm:text-[32px]">{title}</h1>
+        <h1 className="font-display text-[28px] font-extrabold leading-tight tracking-tight text-ink sm:text-[32px]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-2">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -156,7 +156,7 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
 export function Empty({ icon, title, children, action }: { icon: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-text">{icon}</div>
+      <div className="bg-brand-gradient glow-brand mb-4 flex size-14 items-center justify-center rounded-2xl text-white">{icon}</div>
       <h3 className="text-base font-semibold text-ink">{title}</h3>
       {children && <p className="mt-1 max-w-sm text-sm text-ink-2">{children}</p>}
       {action && <div className="mt-5">{action}</div>}
@@ -168,7 +168,7 @@ export function Progress({ value, className, tone = "brand" }: { value: number; 
   return (
     <div className={clsx("h-2 overflow-hidden rounded-full bg-surface-3", className)} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
       <div
-        className={clsx("h-full rounded-full transition-[width] duration-500", tone === "brand" ? "bg-brand" : "bg-gold")}
+        className={clsx("h-full rounded-full transition-[width] duration-500", tone === "brand" ? "bg-brand-gradient" : "bg-gold")}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
@@ -232,7 +232,7 @@ export function Switch({ checked, onChange, label, description, disabled }: { ch
         onClick={() => onChange(!checked)}
         className={clsx(
           "relative mt-0.5 inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors",
-          checked ? "bg-brand" : "bg-surface-3 ring-1 ring-inset ring-line-strong",
+          checked ? "bg-brand-gradient" : "bg-surface-3 ring-1 ring-inset ring-line-strong",
         )}
       >
         <span className={clsx("inline-block size-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[18px]" : "translate-x-0.5")} />

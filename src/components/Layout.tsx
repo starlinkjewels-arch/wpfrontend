@@ -38,7 +38,7 @@ function WaPill({ compact }: { compact?: boolean }) {
   if (compact) {
     return (
       <button onClick={() => navigate("/whatsapp")} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] font-medium" aria-label="WhatsApp connection">
-        <span className={clsx("size-2 rounded-full", connected ? "bg-brand" : "animate-pulse-dot bg-danger")} />
+        <span className={clsx("size-2 rounded-full", connected ? "bg-emerald-500" : "animate-pulse-dot bg-danger")} />
         {connected ? "Live" : "Offline"}
       </button>
     );
@@ -48,18 +48,18 @@ function WaPill({ compact }: { compact?: boolean }) {
       onClick={() => navigate("/whatsapp")}
       className={clsx(
         "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
-        connected ? "border-line bg-surface hover:bg-surface-2" : "border-danger/25 bg-danger-soft hover:brightness-[0.98]",
+        connected ? "border-white/10 bg-white/[0.06] hover:bg-white/10" : "border-rose-400/30 bg-rose-500/15 hover:bg-rose-500/20",
       )}
     >
-      <span className={clsx("flex size-8 shrink-0 items-center justify-center rounded-lg", connected ? "bg-brand-soft text-brand-text" : "bg-surface text-danger")}>
+      <span className={clsx("flex size-8 shrink-0 items-center justify-center rounded-lg", connected ? "bg-emerald-400/15 text-emerald-300" : "bg-rose-500/20 text-rose-300")}>
         {connected ? <Smartphone className="size-4" /> : <WifiOff className="size-4" />}
       </span>
       <span className="min-w-0">
-        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-          <span className={clsx("size-1.5 rounded-full", connected ? "bg-brand" : "animate-pulse-dot bg-danger")} />
+        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
+          <span className={clsx("size-1.5 rounded-full", connected ? "bg-emerald-400" : "animate-pulse-dot bg-rose-400")} />
           {connected ? "WhatsApp connected" : s === "qr" ? "Scan QR to connect" : "Not connected"}
         </span>
-        <span className="block truncate text-[12px] text-ink-3">{connected ? data?.wa.phoneDisplay : "Tap to connect your number"}</span>
+        <span className="block truncate text-[12px] text-white/55">{connected ? data?.wa.phoneDisplay : "Tap to connect your number"}</span>
       </span>
     </button>
   );
@@ -85,9 +85,12 @@ export function Layout() {
   return (
     <div className="min-h-dvh lg:flex">
       {/* ── Sidebar (desktop) ── */}
-      <aside className="sticky top-0 hidden h-dvh w-[260px] shrink-0 flex-col border-r border-line bg-surface/60 px-4 py-5 backdrop-blur lg:flex">
+      <aside
+        className="scroll-thin sticky top-0 hidden h-dvh w-[260px] shrink-0 flex-col overflow-y-auto px-4 py-5 text-white lg:flex"
+        style={{ background: "radial-gradient(420px 260px at 0% 0%, rgba(124,92,255,.35), transparent 70%), radial-gradient(300px 300px at 100% 100%, rgba(59,130,246,.22), transparent 70%), linear-gradient(180deg, var(--sidebar-from), var(--sidebar-to))" }}
+      >
         <div className="px-2">
-          <Logo name={status?.businessName} />
+          <Logo name={status?.businessName} onDark />
         </div>
         <Button variant="primary" className="mt-6 w-full" icon={<Plus className="size-4" />} onClick={() => navigate("/campaigns/new")}>
           New broadcast
@@ -100,16 +103,17 @@ export function Layout() {
               end={end}
               className={({ isActive }) =>
                 clsx(
-                  "group flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors",
-                  isActive ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2/70 hover:text-ink",
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                  isActive ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-white/65 hover:bg-white/[0.07] hover:text-white",
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={clsx("size-[18px]", isActive ? "text-brand" : "text-ink-3 group-hover:text-ink-2")} />
+                  {isActive && <span className="bg-brand-gradient absolute inset-y-2 left-0 w-1 rounded-full" />}
+                  <Icon className={clsx("size-[18px]", isActive ? "text-violet-300" : "text-white/45 group-hover:text-white/80")} />
                   <span className="flex-1">{label}</span>
-                  {badge(b) > 0 && <span className="rounded-full bg-brand px-1.5 py-px text-[11px] font-semibold text-white">{badge(b)}</span>}
+                  {badge(b) > 0 && <span className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-1.5 py-px text-[11px] font-semibold text-white">{badge(b)}</span>}
                 </>
               )}
             </NavLink>
@@ -117,16 +121,16 @@ export function Layout() {
         </nav>
         <div className="mt-auto space-y-3">
           {status?.demo && (
-            <div className="flex items-center gap-2 rounded-xl bg-gold-soft px-3 py-2 text-[12px] font-medium text-gold">
+            <div className="flex items-center gap-2 rounded-xl bg-fuchsia-500/15 px-3 py-2 text-[12px] font-medium text-fuchsia-200">
               <FlaskConical className="size-4" /> Demo mode — nothing is really sent
             </div>
           )}
           <WaPill />
           <div className="flex items-center justify-between px-1">
-            <button onClick={toggle} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <button onClick={toggle} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-white/60 hover:bg-white/10 hover:text-white">
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />} {dark ? "Light" : "Dark"} mode
             </button>
-            <button onClick={signOut} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <button onClick={signOut} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-white/60 hover:bg-white/10 hover:text-white">
               <LogOut className="size-4" /> Sign out
             </button>
           </div>
@@ -134,7 +138,7 @@ export function Layout() {
       </aside>
 
       {/* ── Top bar (mobile) ── */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-bg/85 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="glass sticky top-0 z-30 flex items-center justify-between border-b border-line px-4 py-3 lg:hidden">
         <Logo name={status?.businessName} compact />
         <div className="flex items-center gap-2">
           <WaPill compact />
@@ -181,13 +185,13 @@ export function Layout() {
       </main>
 
       {/* ── Tab bar (mobile) ── */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 px-1 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 backdrop-blur lg:hidden">
+      <nav className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line px-1 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 lg:hidden">
         {[NAV[0], NAV[1], { to: "/campaigns/new", label: "New", icon: Plus, fab: true }, NAV[2], NAV[4]].map((item) => {
           const Icon = item.icon;
           if ("fab" in item) {
             return (
               <button key="fab" onClick={() => navigate(item.to)} className="flex flex-col items-center gap-0.5" aria-label="New broadcast">
-                <span className="-mt-5 flex size-12 items-center justify-center rounded-2xl bg-brand text-white shadow-pop">
+                <span className="bg-brand-gradient glow-brand -mt-5 flex size-12 items-center justify-center rounded-2xl text-white">
                   <Icon className="size-6" />
                 </span>
               </button>
@@ -203,7 +207,7 @@ export function Layout() {
             >
               <Icon className="size-5" />
               {item.label}
-              {n > 0 && <span className="absolute right-[22%] top-0 rounded-full bg-brand px-1 text-[10px] font-semibold text-white">{n}</span>}
+              {n > 0 && <span className="absolute right-[22%] top-0 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-1 text-[10px] font-semibold text-white">{n}</span>}
             </NavLink>
           );
         })}

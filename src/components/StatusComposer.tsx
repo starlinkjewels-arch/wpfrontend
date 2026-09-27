@@ -9,7 +9,7 @@ import { ago, num } from "../lib/format";
 import { Button, Callout, Label, Modal, Segmented } from "./ui";
 import { WaText } from "./PhonePreview";
 
-const COLORS = ["#0b7a5c", "#1f2a44", "#7a4f9a", "#a47623", "#b23a48", "#111111"];
+const COLORS = ["#6d4aff", "#2563eb", "#db2777", "#0d9488", "#ea580c", "#111827"];
 
 /**
  * Posting to WhatsApp Status: a text on a colour, or a photo or video with a

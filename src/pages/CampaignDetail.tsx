@@ -112,7 +112,7 @@ export function CampaignDetailPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-[28px] font-medium leading-tight tracking-tight sm:text-[32px]">{c.name}</h1>
+            <h1 className="font-display text-[28px] font-extrabold leading-tight tracking-tight sm:text-[32px]">{c.name}</h1>
             <StatusBadge status={c.status} />
           </div>
           <p className="mt-1.5 text-sm text-ink-3">
@@ -158,7 +158,7 @@ export function CampaignDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           {/* Progress */}
           <Card className="p-5 sm:p-6">
@@ -225,7 +225,7 @@ export function CampaignDetailPage() {
 
           {/* Recipients */}
           <Card className="overflow-hidden">
-            <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 border-b border-line p-4 2xl:flex-row 2xl:items-center">
               <div className="scroll-thin overflow-x-auto">
                 <Segmented<RFilter>
                   value={rf}
@@ -240,7 +240,7 @@ export function CampaignDetailPage() {
                   ]}
                 />
               </div>
-              <div className="relative sm:ml-auto sm:w-56">
+              <div className="relative 2xl:ml-auto 2xl:w-56">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
                 <input className="field h-9 pl-9" placeholder="Find a client" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
               </div>
@@ -295,12 +295,12 @@ export function CampaignDetailPage() {
 function Stat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
   return (
     <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-      <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-2">
-        <span className={clsx("size-2 rounded-full", color)} />
-        {label}
-        <span className="ml-auto text-ink-3 [&>svg]:size-3.5">{icon}</span>
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-ink-2">
+        <span className={clsx("size-2 shrink-0 rounded-full", color)} />
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="ml-auto shrink-0 text-ink-3 [&>svg]:size-3.5">{icon}</span>
       </div>
-      <div className="mt-1 text-xl font-semibold tracking-tight">{num(value)}</div>
+      <div className="mt-1 font-display text-xl font-extrabold tracking-tight">{num(value)}</div>
     </div>
   );
 }
@@ -318,9 +318,9 @@ function Row({ icon, label, children }: { icon: React.ReactNode; label: string; 
 function Funnel({ label, value, of, icon, accent }: { label: string; value: number; of: number; icon: React.ReactNode; accent?: string }) {
   return (
     <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-      <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-2">
-        <span className={clsx("[&>svg]:size-3.5", accent ?? "text-ink-3")}>{icon}</span>
-        {label}
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-ink-2">
+        <span className={clsx("shrink-0 [&>svg]:size-3.5", accent ?? "text-ink-3")}>{icon}</span>
+        <span className="min-w-0 truncate">{label}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-1.5">
         <span className="text-xl font-semibold tracking-tight">{num(value)}</span>

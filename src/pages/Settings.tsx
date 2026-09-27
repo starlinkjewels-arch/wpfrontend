@@ -48,8 +48,8 @@ export function SettingsPage() {
     <div className="pb-24">
       <PageHeader title="Settings" subtitle="How your campaigns send, and what happens when clients write in." />
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <nav className="hidden space-y-1 text-[13px] font-medium lg:sticky lg:top-8 lg:block lg:self-start">
+      <div className="grid gap-6 xl:grid-cols-[200px_minmax(0,1fr)]">
+        <nav className="hidden space-y-1 text-[13px] font-medium xl:sticky xl:top-8 xl:block xl:self-start">
           {[["business", "Business"], ["ai", "AI writer"], ["safety", "Sending safety"], ["inbound", "Incoming messages"], ["system", "System"]].map(([id, label]) => (
             <a key={id} href={`#${id}`} className="block rounded-lg px-3 py-2 text-ink-2 hover:bg-surface-2 hover:text-ink">{label}</a>
           ))}
