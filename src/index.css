@@ -246,6 +246,14 @@
     transform: none;
   }
 }
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
 @keyframes pulse-dot {
   0%,
   100% {
@@ -263,6 +271,9 @@
 }
 .animate-slide {
   animation: slide-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.animate-slide-left {
+  animation: slide-in-left 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .animate-pulse-dot {
   animation: pulse-dot 1.6s ease-in-out infinite;

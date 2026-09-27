@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Layers, Plus, Search, Send, Users, Megaphone, CalendarClock, MessageCircleReply, Info } from "lucide-react";
@@ -19,6 +19,13 @@ export function BatchesPage() {
   const [q, setQ] = useState("");
   const dq = useDebounced(q);
   const [creating, setCreating] = useState(false);
+  const location = useLocation();
+  useEffect(() => {
+    if ((location.state as { create?: boolean } | null)?.create) {
+      setCreating(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
   const { data, isLoading } = useQuery({ queryKey: ["batches", dq], queryFn: () => api<{ items: Batch[] }>(`/batches?q=${encodeURIComponent(dq)}`) });
   const items = data?.items ?? [];
 

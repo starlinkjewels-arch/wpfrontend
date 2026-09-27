@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import clsx from "clsx";
@@ -189,6 +189,14 @@ function LinksTab() {
   const { data, isLoading } = useQuery({ queryKey: ["lead-links"], queryFn: () => api<LinksResp>("/lead-links") });
   const [editing, setEditing] = useState<LeadLink | "new" | null>(null);
   const [qrFor, setQrFor] = useState<LeadLink | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if ((location.state as { create?: boolean } | null)?.create) {
+      setEditing("new");
+      navigate(location.pathname + location.search, { replace: true, state: null });
+    }
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useMutation({
     mutationFn: (l: LeadLink) => put(`/lead-links/${l.id}`, { active: !l.active }),

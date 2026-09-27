@@ -283,7 +283,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
 
 /* ── Overlays ───────────────────────────────────────────────────────── */
 
-function useEscape(onClose: () => void, active = true) {
+export function useEscape(onClose: () => void, active = true) {
   useEffect(() => {
     if (!active) return;
     const fn = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -292,7 +292,7 @@ function useEscape(onClose: () => void, active = true) {
   }, [onClose, active]);
 }
 
-function useBodyLock(active: boolean) {
+export function useBodyLock(active: boolean) {
   useEffect(() => {
     if (!active) return;
     const prev = document.body.style.overflow;
@@ -408,7 +408,8 @@ export const useConfirm = () => useContext(ConfirmCtx);
 
 /* ── Menu (click-to-open) ───────────────────────────────────────────── */
 
-export function Menu({ trigger, children, align = "right" }: { trigger: (open: boolean) => ReactNode; children: (close: () => void) => ReactNode; align?: "left" | "right" }) {
+/** `side`: below the trigger (default), above it (for a menu at the bottom of the screen), or beside it (from a narrow rail). */
+export function Menu({ trigger, children, align = "right", side = "bottom", className }: { trigger: (open: boolean) => ReactNode; children: (close: () => void) => ReactNode; align?: "left" | "right"; side?: "bottom" | "top" | "end"; className?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -419,10 +420,18 @@ export function Menu({ trigger, children, align = "right" }: { trigger: (open: b
   }, [open]);
   useEscape(() => setOpen(false), open);
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={clsx("relative", className)}>
       <div onClick={() => setOpen((o) => !o)}>{trigger(open)}</div>
       {open && (
-        <div className={clsx("animate-pop absolute z-40 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-pop", align === "right" ? "right-0" : "left-0")}>
+        <div
+          className={clsx(
+            "animate-pop absolute z-50 min-w-48 overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-pop",
+            side === "bottom" && "top-full mt-1.5",
+            side === "top" && "bottom-full mb-1.5",
+            side === "end" && "bottom-0 left-full ml-2",
+            side !== "end" && (align === "right" ? "right-0" : "left-0"),
+          )}
+        >
           {children(() => setOpen(false))}
         </div>
       )}

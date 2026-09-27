@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { toast } from "sonner";
@@ -36,6 +36,16 @@ export function ClientsPage() {
   const [allMatching, setAllMatching] = useState(false);
   const [drawer, setDrawer] = useState<{ open: boolean; contact: Contact | null }>({ open: false, contact: null });
   const [tagModal, setTagModal] = useState<null | "addTags" | "removeTags">(null);
+
+  // From the command palette: "Add a client", or a client picked from search.
+  const location = useLocation();
+  useEffect(() => {
+    const st = location.state as { create?: boolean; openClient?: string } | null;
+    if (!st) return;
+    if (st.create) setDrawer({ open: true, contact: null });
+    if (st.openClient) api<Contact>(`/contacts/${st.openClient}`).then((c) => setDrawer({ open: true, contact: c })).catch(() => {});
+    navigate(location.pathname + location.search, { replace: true, state: null });
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: meta } = useMeta();
   const filterQs = useMemo(() => {
